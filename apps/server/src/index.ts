@@ -46,10 +46,13 @@ io.on('connection', (socket) => {
   // 진행 중인 게임이 있으면 재접속 처리
   getActiveRoom(userId)?.handleReconnect(userId, socket);
 
-  socket.on('queue:join', () => void joinQueue(io, socket));
+  socket.on('queue:join', (p) => void joinQueue(io, socket, p?.mode));
   socket.on('queue:leave', () => leaveQueue(userId));
   socket.on('game:answer', ({ round, choiceIndex }) => {
     getActiveRoom(userId)?.handleAnswer(userId, round, choiceIndex);
+  });
+  socket.on('game:stop', ({ round, frame }) => {
+    getActiveRoom(userId)?.handleStop(userId, round, frame);
   });
   socket.on('disconnect', () => handleSocketDisconnect(userId, socket.id));
 });

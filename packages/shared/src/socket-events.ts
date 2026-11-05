@@ -1,4 +1,4 @@
-import type { GameOverReason } from './game';
+import type { GameMode, GameOverReason } from './game';
 
 export interface PlayerInfo {
   id: string;
@@ -7,11 +7,13 @@ export interface PlayerInfo {
 
 export interface MatchFoundPayload {
   roomId: string;
+  mode: GameMode;
   opponent: PlayerInfo;
   totalRounds: number;
 }
 
 export interface QuizQuestionPayload {
+  kind: 'quiz';
   round: number;
   totalRounds: number;
   question: string;
@@ -20,16 +22,39 @@ export interface QuizQuestionPayload {
   deadline: number;
 }
 
-export interface RoundResultPayload {
+export interface TimingRoundPayload {
+  kind: 'timing';
   round: number;
-  answerIndex: number;
-  /** userId → 이 라운드에 제출한 선택지 (미제출은 null) */
+  totalRounds: number;
+  assetId: string;
+  /** 플레이어가 맞춰야 하는 프레임 (TIMING_FPS 기준) */
+  targetFrame: number;
+  deadline: number;
+}
+
+export type RoundPayload = QuizQuestionPayload | TimingRoundPayload;
+
+interface RoundResultBase {
+  round: number;
+  /** userId → 제출값 (퀴즈는 선택지, 타이밍은 멈춘 프레임 / 미제출은 null) */
   answers: Record<string, number | null>;
   /** userId → 이 라운드 획득 점수 */
   roundScores: Record<string, number>;
   /** userId → 누적 점수 */
   totalScores: Record<string, number>;
 }
+
+export interface QuizRoundResult extends RoundResultBase {
+  kind: 'quiz';
+  answerIndex: number;
+}
+
+export interface TimingRoundResult extends RoundResultBase {
+  kind: 'timing';
+  targetFrame: number;
+}
+
+export type RoundResultPayload = QuizRoundResult | TimingRoundResult;
 
 export interface GameOverPayload {
   /** null이면 무승부 */
@@ -44,14 +69,14 @@ export interface GameStatePayload {
   opponent: PlayerInfo;
   totalRounds: number;
   scores: Record<string, number>;
-  currentQuestion: QuizQuestionPayload | null;
+  currentQuestion: RoundPayload | null;
 }
 
 export interface ServerToClientEvents {
   'queue:joined': () => void;
   'queue:error': (p: { message: string }) => void;
   'match:found': (p: MatchFoundPayload) => void;
-  'game:question': (p: QuizQuestionPayload) => void;
+  'game:question': (p: RoundPayload) => void;
   'game:roundResult': (p: RoundResultPayload) => void;
   'game:over': (p: GameOverPayload) => void;
   'game:state': (p: GameStatePayload) => void;
@@ -60,7 +85,8 @@ export interface ServerToClientEvents {
 }
 
 export interface ClientToServerEvents {
-  'queue:join': () => void;
+  'queue:join': (p: { mode: GameMode }) => void;
   'queue:leave': () => void;
   'game:answer': (p: { round: number; choiceIndex: number }) => void;
+  'game:stop': (p: { round: number; frame: number }) => void;
 }
