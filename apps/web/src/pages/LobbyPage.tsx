@@ -1,11 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { MatchFoundPayload } from '@stamp-tour/shared';
+import { GAME_MODES, type GameMode, type MatchFoundPayload } from '@stamp-tour/shared';
 import { getSocket } from '../lib/socket';
 import { getUser } from '../lib/auth';
 
+const MODE_LABELS: Record<GameMode, string> = {
+  quiz: '퀴즈 대결',
+  timing: '타이밍 대결',
+};
+
 export default function LobbyPage() {
-  const [waiting, setWaiting] = useState(false);
+  const [waitingMode, setWaitingMode] = useState<GameMode | null>(null);
+  // queue:joined에는 모드가 없어서 마지막으로 신청한 모드를 기억한다.
+  const requestedModeRef = useRef<GameMode | null>(null);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const user = getUser();
@@ -13,9 +20,9 @@ export default function LobbyPage() {
   useEffect(() => {
     const socket = getSocket();
 
-    const onJoined = () => setWaiting(true);
+    const onJoined = () => setWaitingMode(requestedModeRef.current);
     const onError = ({ message }: { message: string }) => {
-      setWaiting(false);
+      setWaitingMode(null);
       setError(message);
     };
     const onMatch = (payload: MatchFoundPayload) => {
@@ -33,14 +40,15 @@ export default function LobbyPage() {
     };
   }, [navigate]);
 
-  function toggleQueue() {
+  function toggleQueue(mode: GameMode) {
     const socket = getSocket();
     setError(null);
-    if (waiting) {
+    if (waitingMode === mode) {
       socket.emit('queue:leave');
-      setWaiting(false);
+      setWaitingMode(null);
     } else {
-      socket.emit('queue:join');
+      requestedModeRef.current = mode;
+      socket.emit('queue:join', { mode });
     }
   }
 
@@ -48,23 +56,26 @@ export default function LobbyPage() {
     <div className="flex min-h-full flex-col items-center justify-center gap-6 px-6 py-20">
       <div className="text-6xl">⚔️</div>
       <div className="text-center">
-        <h1 className="text-xl font-bold text-slate-900">퀴즈 대결</h1>
+        <h1 className="text-xl font-bold text-slate-900">1:1 대결</h1>
         <p className="mt-2 text-sm text-slate-500">
           {user?.nickname}님, 접속 중인 다른 여행자와
           <br />
-          랜덤으로 매칭되어 관광지 퀴즈로 대결합니다
+          같은 모드를 고른 상대와 랜덤으로 매칭됩니다
         </p>
       </div>
       {error && <p className="text-sm text-red-500">{error}</p>}
-      <button
-        onClick={toggleQueue}
-        className={`w-full rounded-xl py-4 font-semibold text-white ${
-          waiting ? 'bg-slate-400' : 'bg-blue-600'
-        }`}
-      >
-        {waiting ? '상대를 찾는 중... (탭하면 취소)' : '대결 신청'}
-      </button>
-      {waiting && (
+      {GAME_MODES.map((mode) => (
+        <button
+          key={mode}
+          onClick={() => toggleQueue(mode)}
+          className={`w-full rounded-xl py-4 font-semibold text-white ${
+            waitingMode === mode ? 'bg-slate-400' : 'bg-blue-600'
+          }`}
+        >
+          {waitingMode === mode ? '상대를 찾는 중... (탭하면 취소)' : MODE_LABELS[mode]}
+        </button>
+      ))}
+      {waitingMode && (
         <div className="flex items-center gap-2 text-sm text-slate-400">
           <span className="inline-block h-2 w-2 animate-ping rounded-full bg-blue-500" />
           매칭 대기 중

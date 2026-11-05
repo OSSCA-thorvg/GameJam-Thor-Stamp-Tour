@@ -2,16 +2,22 @@ import {
   ANSWER_TIME_MS,
   RECONNECT_GRACE_MS,
   ROUND_BREAK_MS,
-  ROUNDS,
   scoreForAnswer,
+  scoreForTiming,
+  type GameMode,
   type GameOverReason,
   type GameStatePayload,
-  type QuizQuestionPayload,
+  type RoundPayload,
+  type TimingAsset,
 } from '@stamp-tour/shared';
 import { db } from '../db/client';
 import { gameResults } from '../db/schema';
 import type { QuizQuestion } from './quiz';
 import type { TypedServer, TypedSocket } from './types';
+
+export type RoundSpec =
+  | { kind: 'quiz'; question: QuizQuestion }
+  | { kind: 'timing'; asset: TimingAsset; targetFrame: number };
 
 interface PlayerState {
   userId: string;
@@ -26,14 +32,15 @@ const ANSWER_LATE_GRACE_MS = 1_000;
 
 export class GameRoom {
   readonly roomId: string;
+  readonly mode: GameMode;
   finished = false;
 
   private readonly io: TypedServer;
   private readonly players: [PlayerState, PlayerState];
-  private readonly questions: QuizQuestion[];
+  private readonly rounds: RoundSpec[];
   private round = 0; // 1-based, 0 = 시작 전
   private deadline = 0;
-  private roundAnswers = new Map<string, { choice: number; at: number }>();
+  private roundAnswers = new Map<string, { value: number; at: number }>();
   private roundTimer: NodeJS.Timeout | null = null;
   private breakTimer: NodeJS.Timeout | null = null;
   private readonly onFinished: (room: GameRoom) => void;
@@ -41,14 +48,16 @@ export class GameRoom {
   constructor(
     io: TypedServer,
     roomId: string,
+    mode: GameMode,
     p1: { userId: string; nickname: string; socketId: string },
     p2: { userId: string; nickname: string; socketId: string },
-    questions: QuizQuestion[],
+    rounds: RoundSpec[],
     onFinished: (room: GameRoom) => void,
   ) {
     this.io = io;
     this.roomId = roomId;
-    this.questions = questions;
+    this.mode = mode;
+    this.rounds = rounds;
     this.onFinished = onFinished;
     this.players = [
       { ...p1, score: 0, disconnectTimer: null },
@@ -69,21 +78,34 @@ export class GameRoom {
       const opponent = this.opponentOf(p.userId);
       this.emitToPlayer(p, 'match:found', {
         roomId: this.roomId,
+        mode: this.mode,
         opponent: { id: opponent.userId, nickname: opponent.nickname },
-        totalRounds: ROUNDS,
+        totalRounds: this.rounds.length,
       });
     }
     this.startRound(1);
   }
 
   handleAnswer(userId: string, round: number, choiceIndex: number) {
+    const spec = this.currentRound();
+    if (spec?.kind !== 'quiz') return;
+    if (!Number.isInteger(choiceIndex) || choiceIndex < 0 || choiceIndex >= spec.question.choices.length) return;
+    this.submit(userId, round, choiceIndex);
+  }
+
+  handleStop(userId: string, round: number, frame: number) {
+    const spec = this.currentRound();
+    if (spec?.kind !== 'timing') return;
+    if (!Number.isInteger(frame) || frame < 0 || frame >= spec.asset.totalFrames) return;
+    this.submit(userId, round, frame);
+  }
+
+  private submit(userId: string, round: number, value: number) {
     if (this.finished || round !== this.round) return;
     if (Date.now() > this.deadline + ANSWER_LATE_GRACE_MS) return;
     if (this.roundAnswers.has(userId)) return;
-    const question = this.currentQuestion();
-    if (!question || choiceIndex < 0 || choiceIndex >= question.choices.length) return;
 
-    this.roundAnswers.set(userId, { choice: choiceIndex, at: Date.now() });
+    this.roundAnswers.set(userId, { value, at: Date.now() });
     if (this.roundAnswers.size === this.players.length) this.endRound();
   }
 
@@ -118,9 +140,9 @@ export class GameRoom {
     const state: GameStatePayload = {
       roomId: this.roomId,
       opponent: { id: opponent.userId, nickname: opponent.nickname },
-      totalRounds: ROUNDS,
+      totalRounds: this.rounds.length,
       scores: this.scores(),
-      currentQuestion: this.round >= 1 && Date.now() <= this.deadline ? this.questionPayload() : null,
+      currentQuestion: this.round >= 1 && Date.now() <= this.deadline ? this.roundPayload() : null,
     };
     socket.emit('game:state', state);
     this.emitToPlayer(opponent, 'opponent:reconnected');
@@ -137,7 +159,7 @@ export class GameRoom {
     this.round = round;
     this.roundAnswers.clear();
     this.deadline = Date.now() + ANSWER_TIME_MS;
-    this.io.to(this.roomId).emit('game:question', this.questionPayload());
+    this.io.to(this.roomId).emit('game:question', this.roundPayload());
     this.roundTimer = setTimeout(() => this.endRound(), ANSWER_TIME_MS + ANSWER_LATE_GRACE_MS);
   }
 
@@ -147,30 +169,36 @@ export class GameRoom {
       clearTimeout(this.roundTimer);
       this.roundTimer = null;
     }
-    const question = this.currentQuestion();
-    if (!question) return;
+    const spec = this.currentRound();
+    if (!spec) return;
 
     const answers: Record<string, number | null> = {};
     const roundScores: Record<string, number> = {};
     for (const p of this.players) {
       const answer = this.roundAnswers.get(p.userId);
-      answers[p.userId] = answer?.choice ?? null;
-      const correct = answer !== undefined && answer.choice === question.answerIndex;
-      const gained = correct ? scoreForAnswer(this.deadline - answer.at) : 0;
+      answers[p.userId] = answer?.value ?? null;
+      let gained = 0;
+      if (answer && spec.kind === 'quiz' && answer.value === spec.question.answerIndex) {
+        gained = scoreForAnswer(this.deadline - answer.at);
+      } else if (answer && spec.kind === 'timing') {
+        gained = scoreForTiming(answer.value - spec.targetFrame);
+      }
       roundScores[p.userId] = gained;
       p.score += gained;
     }
 
-    this.io.to(this.roomId).emit('game:roundResult', {
-      round: this.round,
-      answerIndex: question.answerIndex,
-      answers,
-      roundScores,
-      totalScores: this.scores(),
-    });
+    const base = { round: this.round, answers, roundScores, totalScores: this.scores() };
+    this.io
+      .to(this.roomId)
+      .emit(
+        'game:roundResult',
+        spec.kind === 'quiz'
+          ? { ...base, kind: 'quiz', answerIndex: spec.question.answerIndex }
+          : { ...base, kind: 'timing', targetFrame: spec.targetFrame },
+      );
 
     this.breakTimer = setTimeout(() => {
-      if (this.round >= ROUNDS) this.finish('completed');
+      if (this.round >= this.rounds.length) this.finish('completed');
       else this.startRound(this.round + 1);
     }, ROUND_BREAK_MS);
   }
@@ -213,20 +241,18 @@ export class GameRoom {
     }
   }
 
-  private currentQuestion(): QuizQuestion | undefined {
-    return this.questions[this.round - 1];
+  private currentRound(): RoundSpec | undefined {
+    return this.rounds[this.round - 1];
   }
 
-  private questionPayload(): QuizQuestionPayload {
-    const q = this.currentQuestion();
-    if (!q) throw new Error(`라운드 ${this.round}의 문제가 없습니다.`);
-    return {
-      round: this.round,
-      totalRounds: ROUNDS,
-      question: q.question,
-      choices: q.choices,
-      deadline: this.deadline,
-    };
+  private roundPayload(): RoundPayload {
+    const spec = this.currentRound();
+    if (!spec) throw new Error(`라운드 ${this.round}의 문제가 없습니다.`);
+    const base = { round: this.round, totalRounds: this.rounds.length, deadline: this.deadline };
+    if (spec.kind === 'quiz') {
+      return { ...base, kind: 'quiz', question: spec.question.question, choices: spec.question.choices };
+    }
+    return { ...base, kind: 'timing', assetId: spec.asset.id, targetFrame: spec.targetFrame };
   }
 
   private scores(): Record<string, number> {

@@ -5,6 +5,7 @@ import { getUser } from '../lib/auth';
 interface ResultState {
   result: GameOverPayload;
   opponent: PlayerInfo | null;
+  totalRounds?: number;
 }
 
 export default function ResultPage() {
@@ -23,7 +24,7 @@ export default function ResultPage() {
     );
   }
 
-  const { result, opponent } = state;
+  const { result, opponent, totalRounds } = state;
   const won = result.winnerId === me.id;
   const draw = result.winnerId === null;
   const myScore = result.scores[me.id] ?? 0;
@@ -35,7 +36,9 @@ export default function ResultPage() {
       ? won
         ? '상대가 게임을 떠나 승리했습니다'
         : '연결이 끊겨 몰수패 처리되었습니다'
-      : '5라운드 결과';
+      : totalRounds
+        ? `${totalRounds}라운드 결과`
+        : '게임 결과';
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-8 bg-white px-6">
