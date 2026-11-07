@@ -10,6 +10,7 @@ import {
 } from '@stamp-tour/shared';
 import { getWorldSocket } from '../lib/socket';
 import { createGame, type Game } from './game';
+import GuestbookPanel from './GuestbookPanel';
 import { bindKeyboard, createInput } from './input';
 import TouchControls from './TouchControls';
 
@@ -59,15 +60,19 @@ export default function GameView({ spot, me }: Props) {
   }, [input, me, spot.key]);
 
   return (
-    <div className="flex flex-col gap-3">
-      <h1 className="px-4 pt-4 text-lg font-bold text-slate-900">{spot.name}</h1>
-      {/* 데스크탑에서 맵 전체가 세로로도 한 화면에 들어오도록 너비를 제한한다 */}
-      <div
-        ref={containerRef}
-        className="mx-auto w-full overflow-hidden"
-        style={{ maxWidth: `calc((100dvh - 8rem) * ${MAP_WIDTH / MAP_HEIGHT})` }}
-      />
-      <TouchControls input={input} />
+    // main의 하단 바 여백(4rem)을 뺀 높이를 맵과 방명록이 나눠 쓴다
+    <div className="flex h-[calc(100dvh-4rem)] flex-col">
+      <div className="flex shrink-0 flex-col gap-3 pb-3">
+        <h1 className="px-4 pt-4 text-lg font-bold text-slate-900">{spot.name}</h1>
+        {/* 데스크탑에서 맵 높이가 화면 절반을 넘지 않도록 너비를 제한한다 */}
+        <div
+          ref={containerRef}
+          className="mx-auto w-full overflow-hidden"
+          style={{ maxWidth: `calc((50dvh - 3rem) * ${MAP_WIDTH / MAP_HEIGHT})` }}
+        />
+        <TouchControls input={input} />
+      </div>
+      <GuestbookPanel />
     </div>
   );
 }

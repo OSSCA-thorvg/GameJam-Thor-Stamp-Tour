@@ -1,10 +1,13 @@
 import {
+  GUESTBOOK_MAX_LENGTH,
   JUMP_MAX_HEIGHT,
   MAP_EXIT_MARGIN_M,
   MAP_WIDTH,
   MOVE_SPEED,
   WORLD_TICK_MS,
   type Facing,
+  type GuestbookEntry,
+  type GuestbookPostResult,
   type WorldPlayer,
 } from '@stamp-tour/shared';
 import { db } from '../db/client';
@@ -12,6 +15,7 @@ import { spots } from '../db/schema';
 import { env } from '../lib/env';
 import { haversineM } from '../lib/haversine';
 import { verifyToken } from '../lib/jwt';
+import { addEntry, listEntries } from './guestbook';
 import type { TypedServer, WorldNamespace, WorldSocket } from './types';
 
 type SpotRow = typeof spots.$inferSelect;
@@ -146,6 +150,34 @@ function handleMove(socket: WorldSocket, move: { x?: unknown; y?: unknown; facin
   player.lastMoveAt = now;
 }
 
+async function handleGuestbookList(socket: WorldSocket, ack: (entries: GuestbookEntry[]) => void) {
+  const spotId = playerInMap(socket)?.spotId;
+  ack(spotId ? await listEntries(spotId) : []);
+}
+
+async function handleGuestbookPost(
+  world: WorldNamespace,
+  socket: WorldSocket,
+  body: { message?: unknown },
+  ack: (result: GuestbookPostResult) => void,
+) {
+  const spotId = playerInMap(socket)?.spotId;
+  if (!spotId) {
+    ack({ ok: false, error: '관광지 맵 안에서만 글을 남길 수 있습니다.' });
+    return;
+  }
+
+  const message = typeof body?.message === 'string' ? body.message.trim() : '';
+  if (message.length < 1 || message.length > GUESTBOOK_MAX_LENGTH) {
+    ack({ ok: false, error: `글은 1~${GUESTBOOK_MAX_LENGTH}자여야 합니다.` });
+    return;
+  }
+
+  const entry = await addEntry(spotId, socket.data.userId, socket.data.nickname, message);
+  world.to(roomOf(spotId)).emit('world:guestbook:new', entry);
+  ack({ ok: true });
+}
+
 function broadcastSnapshots(world: WorldNamespace) {
   const bySpot = new Map<string, WorldPlayer[]>();
   for (const [id, p] of players) {
@@ -199,6 +231,20 @@ export function registerWorld(io: TypedServer) {
       handleLocation(socket, pos).catch((err) => console.error('위치 처리 실패:', err));
     });
     socket.on('world:move', (move) => handleMove(socket, move));
+    socket.on('world:guestbook:list', (ack) => {
+      if (typeof ack !== 'function') return;
+      handleGuestbookList(socket, ack).catch((err) => {
+        console.error('방명록 조회 실패:', err);
+        ack([]);
+      });
+    });
+    socket.on('world:guestbook:post', (body, ack) => {
+      if (typeof ack !== 'function') return;
+      handleGuestbookPost(world, socket, body, ack).catch((err) => {
+        console.error('방명록 작성 실패:', err);
+        ack({ ok: false, error: '글을 남기지 못했습니다.' });
+      });
+    });
     socket.on('disconnect', () => {
       if (isOwner(socket)) players.delete(userId);
     });

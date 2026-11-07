@@ -1,5 +1,6 @@
 import {
   doublePrecision,
+  index,
   integer,
   jsonb,
   pgTable,
@@ -61,3 +62,19 @@ export const gameResults = pgTable('game_results', {
   reason: text('reason').notNull(),
   playedAt: timestamp('played_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const guestbookEntries = pgTable(
+  'guestbook_entries',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    spotId: uuid('spot_id')
+      .notNull()
+      .references(() => spots.id),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    message: text('message').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index('guestbook_spot_created_idx').on(t.spotId, t.createdAt)],
+);

@@ -10,6 +10,8 @@ export function createInput(): GameInput {
 
 export function bindKeyboard(input: GameInput): () => void {
   const onKey = (e: KeyboardEvent, down: boolean) => {
+    // 입력칸에서 글을 쓸 때는 게임 키로 처리하지 않는다. 뗄 때는 눌린 상태가 남지 않게 그대로 처리한다.
+    if (down && e.target instanceof HTMLInputElement) return;
     if (e.code === 'ArrowLeft') input.left = down;
     else if (e.code === 'ArrowRight') input.right = down;
     else if (e.code === 'Space' || e.code === 'ArrowUp') {

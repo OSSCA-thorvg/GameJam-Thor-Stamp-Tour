@@ -32,4 +32,7 @@ export const JUMP_VELOCITY = 260;
 export const GRAVITY = 800;
 export const JUMP_MAX_HEIGHT = 48;
 
+export const GUESTBOOK_MAX_LENGTH = 100;
+export const GUESTBOOK_LIST_LIMIT = 50;
+
 export type GameOverReason = 'completed' | 'forfeit' | 'opponent_left';

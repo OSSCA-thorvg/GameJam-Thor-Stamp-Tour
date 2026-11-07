@@ -1,5 +1,5 @@
 import { db } from './client';
-import { gameResults, quizzes, spots, stamps } from './schema';
+import { gameResults, guestbookEntries, quizzes, spots, stamps } from './schema';
 
 const SPOTS = [
   {
@@ -96,6 +96,7 @@ const QUIZZES: QuizSeed[] = [
 async function main() {
   console.log('기존 데이터 삭제...');
   await db.delete(gameResults);
+  await db.delete(guestbookEntries);
   await db.delete(stamps);
   await db.delete(quizzes);
   await db.delete(spots);

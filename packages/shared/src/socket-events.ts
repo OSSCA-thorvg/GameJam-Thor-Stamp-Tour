@@ -90,14 +90,27 @@ export interface WorldSnapshotPayload {
   players: WorldPlayer[];
 }
 
+export interface GuestbookEntry {
+  id: string;
+  nickname: string;
+  message: string;
+  /** ISO 8601 */
+  createdAt: string;
+}
+
+export type GuestbookPostResult = { ok: true } | { ok: false; error: string };
+
 /** 홈 화면 맵 전용 네임스페이스(/world) — 퀴즈 소켓과 분리한다. */
 export interface WorldServerToClientEvents {
   'world:status': (p: WorldStatusPayload) => void;
   'world:snapshot': (p: WorldSnapshotPayload) => void;
   'world:replaced': () => void;
+  'world:guestbook:new': (p: GuestbookEntry) => void;
 }
 
 export interface WorldClientToServerEvents {
   'world:location': (p: { lat: number; lng: number } | null) => void;
   'world:move': (p: { x: number; y: number; facing: Facing }) => void;
+  'world:guestbook:list': (ack: (entries: GuestbookEntry[]) => void) => void;
+  'world:guestbook:post': (p: { message: string }, ack: (result: GuestbookPostResult) => void) => void;
 }
