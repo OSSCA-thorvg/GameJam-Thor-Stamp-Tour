@@ -1,6 +1,7 @@
 import { Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { getToken } from './lib/auth';
 import LoginPage from './pages/LoginPage';
+import HomePage from './pages/HomePage';
 import SpotListPage from './pages/SpotListPage';
 import MyStampsPage from './pages/MyStampsPage';
 import LobbyPage from './pages/LobbyPage';
@@ -22,8 +23,8 @@ function Layout() {
         <Outlet />
       </main>
       <nav className="fixed bottom-0 left-1/2 flex w-full max-w-md -translate-x-1/2 border-t border-slate-200 bg-white">
-        <NavLink to="/spots" className={tabClass}>
-          🗺️ 관광지
+        <NavLink to="/home" className={tabClass}>
+          🏠 홈
         </NavLink>
         <NavLink to="/stamps" className={tabClass}>
           📖 스탬프
@@ -42,6 +43,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
+          <Route path="/home" element={<HomePage />} />
           <Route path="/spots" element={<SpotListPage />} />
           <Route path="/stamps" element={<MyStampsPage />} />
           <Route path="/lobby" element={<LobbyPage />} />
@@ -49,7 +51,7 @@ export default function App() {
         <Route path="/game" element={<GamePage />} />
         <Route path="/result" element={<ResultPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/spots" replace />} />
+      <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>
   );
 }

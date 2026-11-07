@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { Spot, StampRecord } from '@stamp-tour/shared';
 import { api } from '../lib/api';
 import { getUser } from '../lib/auth';
@@ -21,7 +22,12 @@ export default function MyStampsPage() {
 
   return (
     <div className="px-4 py-6">
-      <h1 className="text-xl font-bold text-slate-900">{user?.nickname}님의 스탬프</h1>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-xl font-bold text-slate-900">{user?.nickname}님의 스탬프</h1>
+        <Link to="/spots" aria-label="관광지 보기" className="text-2xl">
+          🗺️
+        </Link>
+      </div>
       <p className="mt-1 text-sm text-slate-500">
         {stamps.length} / {spots.length} 획득
       </p>

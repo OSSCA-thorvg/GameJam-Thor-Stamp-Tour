@@ -23,7 +23,7 @@ export default function LoginPage() {
       });
       saveAuth(res.token, res.user);
       resetSocket(); // 새 토큰으로 소켓을 다시 연결
-      navigate('/spots');
+      navigate('/home');
     } catch (err) {
       setError(err instanceof Error ? err.message : '로그인에 실패했습니다.');
     } finally {
