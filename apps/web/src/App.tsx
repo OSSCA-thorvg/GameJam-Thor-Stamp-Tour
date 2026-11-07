@@ -15,14 +15,18 @@ function RequireAuth() {
 }
 
 function Layout() {
+  // 홈 맵은 데스크탑에서 한 화면 전체를 쓴다
+  const wide = useLocation().pathname === '/home' ? 'lg:max-w-none' : '';
   const tabClass = ({ isActive }: { isActive: boolean }) =>
     `flex-1 py-3 text-center text-sm font-medium ${isActive ? 'text-blue-600' : 'text-slate-500'}`;
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-white shadow-lg">
+    <div className={`mx-auto flex min-h-dvh max-w-md flex-col bg-white shadow-lg ${wide}`}>
       <main className="flex-1 overflow-y-auto pb-16">
         <Outlet />
       </main>
-      <nav className="fixed bottom-0 left-1/2 flex w-full max-w-md -translate-x-1/2 border-t border-slate-200 bg-white">
+      <nav
+        className={`fixed bottom-0 left-1/2 flex w-full max-w-md -translate-x-1/2 border-t border-slate-200 bg-white ${wide}`}
+      >
         <NavLink to="/home" className={tabClass}>
           🏠 홈
         </NavLink>

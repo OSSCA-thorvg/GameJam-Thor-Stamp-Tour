@@ -17,6 +17,7 @@ export const users = pgTable('users', {
 
 export const spots = pgTable('spots', {
   id: uuid('id').defaultRandom().primaryKey(),
+  key: text('key').notNull().unique(),
   name: text('name').notNull(),
   description: text('description').notNull(),
   lat: doublePrecision('lat').notNull(),

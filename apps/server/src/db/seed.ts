@@ -3,6 +3,7 @@ import { gameResults, quizzes, spots, stamps } from './schema';
 
 const SPOTS = [
   {
+    key: 'gyeongbokgung',
     name: '경복궁',
     description: '조선 왕조의 법궁. 광화문과 경회루가 있는 서울의 대표 궁궐.',
     lat: 37.5796,
@@ -10,6 +11,7 @@ const SPOTS = [
     radiusM: 300,
   },
   {
+    key: 'n-seoul-tower',
     name: 'N서울타워',
     description: '남산 정상의 전망 타워. 서울 전경과 사랑의 자물쇠로 유명.',
     lat: 37.5512,
@@ -17,6 +19,7 @@ const SPOTS = [
     radiusM: 200,
   },
   {
+    key: 'bukchon-hanok-village',
     name: '북촌한옥마을',
     description: '경복궁과 창덕궁 사이의 전통 한옥 밀집 지역.',
     lat: 37.5826,
@@ -24,6 +27,7 @@ const SPOTS = [
     radiusM: 250,
   },
   {
+    key: 'gwangjang-market',
     name: '광장시장',
     description: '빈대떡과 마약김밥으로 유명한 종로구의 전통 시장.',
     lat: 37.5701,
@@ -31,6 +35,7 @@ const SPOTS = [
     radiusM: 150,
   },
   {
+    key: 'deoksugung',
     name: '덕수궁',
     description: '돌담길과 석조전으로 유명한 정동의 궁궐.',
     lat: 37.5658,
@@ -38,6 +43,7 @@ const SPOTS = [
     radiusM: 200,
   },
   {
+    key: 'yeouido-hangang-park',
     name: '여의도 한강공원',
     description: '봄 벚꽃 축제와 야경 명소. 한강을 따라 펼쳐진 시민 공원.',
     lat: 37.5284,
@@ -45,6 +51,7 @@ const SPOTS = [
     radiusM: 400,
   },
   {
+    key: 'yeongdeungpo-times-square',
     name: '영등포 타임스퀘어',
     description: '영등포역 인근의 대형 복합 쇼핑몰. 백화점과 서점, 영화관이 모여 있는 서남권 대표 상권.',
     lat: 37.5172,
@@ -52,6 +59,7 @@ const SPOTS = [
     radiusM: 200,
   },
   {
+    key: 'test-spot',
     name: '테스트 지점 (내 위치)',
     description: '개발 테스트용 스탬프 지점. 실제 GPS 검증 테스트에 사용.',
     lat: 37.52092741431193,

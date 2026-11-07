@@ -1,5 +1,10 @@
-import type { Server, Socket } from 'socket.io';
-import type { ClientToServerEvents, ServerToClientEvents } from '@stamp-tour/shared';
+import type { Namespace, Server, Socket } from 'socket.io';
+import type {
+  ClientToServerEvents,
+  ServerToClientEvents,
+  WorldClientToServerEvents,
+  WorldServerToClientEvents,
+} from '@stamp-tour/shared';
 
 export interface SocketData {
   userId: string;
@@ -8,3 +13,6 @@ export interface SocketData {
 
 export type TypedServer = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 export type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
+
+export type WorldNamespace = Namespace<WorldClientToServerEvents, WorldServerToClientEvents, Record<string, never>, SocketData>;
+export type WorldSocket = Socket<WorldClientToServerEvents, WorldServerToClientEvents, Record<string, never>, SocketData>;

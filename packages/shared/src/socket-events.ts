@@ -64,3 +64,40 @@ export interface ClientToServerEvents {
   'queue:leave': () => void;
   'game:answer': (p: { round: number; choiceIndex: number }) => void;
 }
+
+export type Facing = 1 | -1;
+
+export interface WorldSpot {
+  id: string;
+  key: string;
+  name: string;
+}
+
+export interface WorldPlayer {
+  id: string;
+  x: number;
+  y: number;
+  facing: Facing;
+}
+
+export type WorldStatusPayload =
+  | { state: 'outside'; nearest: { name: string; distanceM: number } | null }
+  | { state: 'inside'; spot: WorldSpot; me: WorldPlayer };
+
+export interface WorldSnapshotPayload {
+  /** 서버 시각 epoch ms */
+  t: number;
+  players: WorldPlayer[];
+}
+
+/** 홈 화면 맵 전용 네임스페이스(/world) — 퀴즈 소켓과 분리한다. */
+export interface WorldServerToClientEvents {
+  'world:status': (p: WorldStatusPayload) => void;
+  'world:snapshot': (p: WorldSnapshotPayload) => void;
+  'world:replaced': () => void;
+}
+
+export interface WorldClientToServerEvents {
+  'world:location': (p: { lat: number; lng: number } | null) => void;
+  'world:move': (p: { x: number; y: number; facing: Facing }) => void;
+}

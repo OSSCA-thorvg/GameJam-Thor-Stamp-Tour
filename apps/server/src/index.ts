@@ -9,6 +9,7 @@ import { authRoutes } from './routes/auth';
 import { spotRoutes } from './routes/spots';
 import { meRoutes } from './routes/me';
 import { getActiveRoom, handleSocketDisconnect, joinQueue, leaveQueue } from './game/matchmaking';
+import { registerWorld } from './game/world';
 import type { TypedServer } from './game/types';
 
 const app = new Hono();
@@ -53,3 +54,5 @@ io.on('connection', (socket) => {
   });
   socket.on('disconnect', () => handleSocketDisconnect(userId, socket.id));
 });
+
+registerWorld(io);

@@ -1,12 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Spot, StampResponse } from '@stamp-tour/shared';
 import { api, ApiRequestError } from '../lib/api';
+import { formatDistance } from '../lib/format';
 import { useGeolocation } from '../hooks/useGeolocation';
-
-function formatDistance(m?: number) {
-  if (m === undefined) return null;
-  return m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${m}m`;
-}
 
 export default function SpotListPage() {
   const { lat, lng, error: geoError } = useGeolocation();
