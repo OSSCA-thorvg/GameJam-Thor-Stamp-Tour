@@ -1,6 +1,10 @@
+import type { Appearance } from '@stamp-tour/shared';
+
 export interface StoredUser {
   id: string;
   nickname: string;
+  /** 온보딩 전이면 null, 이 필드가 생기기 전에 저장된 정보면 undefined */
+  appearance?: Appearance | null;
 }
 
 export function getToken(): string | null {
@@ -19,6 +23,10 @@ export function getUser(): StoredUser | null {
 
 export function saveAuth(token: string, user: StoredUser) {
   localStorage.setItem('token', token);
+  localStorage.setItem('user', JSON.stringify(user));
+}
+
+export function saveUser(user: StoredUser) {
   localStorage.setItem('user', JSON.stringify(user));
 }
 
