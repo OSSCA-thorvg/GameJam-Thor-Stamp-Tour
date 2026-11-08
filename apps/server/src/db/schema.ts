@@ -9,10 +9,13 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
+import type { Appearance } from '@stamp-tour/shared';
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
   nickname: text('nickname').notNull(),
+  /** 온보딩 전이면 null */
+  appearance: jsonb('appearance').$type<Appearance>(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 

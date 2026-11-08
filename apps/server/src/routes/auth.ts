@@ -17,6 +17,9 @@ authRoutes.post('/guest', async (c) => {
   if (!user) return c.json({ error: '유저 생성에 실패했습니다.' }, 500);
 
   const token = await signToken(user);
-  const res: AuthResponse = { token, user: { id: user.id, nickname: user.nickname } };
+  const res: AuthResponse = {
+    token,
+    user: { id: user.id, nickname: user.nickname, appearance: user.appearance ?? null },
+  };
   return c.json(res);
 });

@@ -1,6 +1,15 @@
+import type { Appearance } from './game';
+
+export interface MeResponse {
+  id: string;
+  nickname: string;
+  /** 온보딩 전이면 null */
+  appearance: Appearance | null;
+}
+
 export interface AuthResponse {
   token: string;
-  user: { id: string; nickname: string };
+  user: MeResponse;
 }
 
 export interface Spot {
