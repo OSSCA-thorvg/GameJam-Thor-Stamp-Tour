@@ -1,5 +1,5 @@
 import type { Picture, ThorVGNamespace } from '@thorvg/webcanvas';
-import { MAP_HEIGHT, MAP_WIDTH } from '@stamp-tour/shared';
+import { MAP_HEIGHT, MAP_WIDTH, type CharacterPart } from '@stamp-tour/shared';
 
 // 파일을 폴더에 넣으면 빌드 시 자동으로 잡힌다. 없으면 임시 사각형으로 그린다.
 const mapUrls = import.meta.glob<string>('../assets/game/maps/*.png', {
@@ -7,13 +7,24 @@ const mapUrls = import.meta.glob<string>('../assets/game/maps/*.png', {
   query: '?url',
   import: 'default',
 });
-const characterFiles = import.meta.glob<string>('../assets/game/character/character.json', {
+const characterUrls = import.meta.glob<string>('../assets/game/character/**/*.png', {
   eager: true,
-  query: '?raw',
+  query: '?url',
   import: 'default',
 });
 
-export const characterLottie: string | null = Object.values(characterFiles)[0] ?? null;
+const CHARACTER_DIR = '../assets/game/character';
+
+export const bodyUrl: string | null = characterUrls[`${CHARACTER_DIR}/body.png`] ?? null;
+
+/** `<부위>/<부위><번호>.png`. 그 번호의 그림이 없으면 1번 그림을 쓴다. */
+export function characterPartUrl(part: CharacterPart, option: number): string | null {
+  return (
+    characterUrls[`${CHARACTER_DIR}/${part}/${part}${option}.png`] ??
+    characterUrls[`${CHARACTER_DIR}/${part}/${part}1.png`] ??
+    null
+  );
+}
 
 export async function loadBackground(TVG: ThorVGNamespace, spotKey: string): Promise<Picture | null> {
   const url = mapUrls[`../assets/game/maps/${spotKey}.png`];

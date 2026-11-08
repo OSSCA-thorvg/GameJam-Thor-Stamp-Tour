@@ -1,4 +1,4 @@
-import type { GameOverReason } from './game';
+import type { Appearance, GameOverReason } from './game';
 
 export interface PlayerInfo {
   id: string;
@@ -78,6 +78,7 @@ export interface WorldPlayer {
   x: number;
   y: number;
   facing: Facing;
+  appearance: Appearance;
 }
 
 export type WorldStatusPayload =

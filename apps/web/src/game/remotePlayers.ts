@@ -1,4 +1,4 @@
-import type { Facing, WorldSnapshotPayload } from '@stamp-tour/shared';
+import type { Appearance, Facing, WorldSnapshotPayload } from '@stamp-tour/shared';
 
 interface Sample {
   t: number;
@@ -13,6 +13,7 @@ export interface RemotePlayerView {
   y: number;
   facing: Facing;
   moving: boolean;
+  appearance: Appearance;
 }
 
 const RENDER_DELAY_MS = 100;
@@ -38,6 +39,7 @@ function sampleAt(samples: Sample[], t: number): Sample {
 /** 서버 스냅샷을 쌓아 두고 조금 늦은 시점을 보간해서 다른 접속자를 부드럽게 보여 준다. */
 export class RemotePlayers {
   private buffers = new Map<string, Sample[]>();
+  private appearances = new Map<string, Appearance>();
   private clockOffset: number | null = null;
 
   constructor(private selfId: string) {}
@@ -50,16 +52,19 @@ export class RemotePlayers {
         : this.clockOffset + (offset - this.clockOffset) * CLOCK_SMOOTHING;
 
     const seen = new Set<string>();
-    for (const { id, x, y, facing } of players) {
+    for (const { id, x, y, facing, appearance } of players) {
       if (id === this.selfId) continue;
       seen.add(id);
+      this.appearances.set(id, appearance);
       const samples = this.buffers.get(id) ?? [];
       samples.push({ t, x, y, facing });
       while (samples.length > 1 && samples[0]!.t < t - BUFFER_MS) samples.shift();
       this.buffers.set(id, samples);
     }
     for (const id of this.buffers.keys()) {
-      if (!seen.has(id)) this.buffers.delete(id);
+      if (seen.has(id)) continue;
+      this.buffers.delete(id);
+      this.appearances.delete(id);
     }
   }
 
@@ -68,7 +73,14 @@ export class RemotePlayers {
     return [...this.buffers].map(([id, samples]) => {
       const now = sampleAt(samples, renderT);
       const before = sampleAt(samples, renderT - MOVING_WINDOW_MS);
-      return { id, x: now.x, y: now.y, facing: now.facing, moving: Math.abs(now.x - before.x) > 1 };
+      return {
+        id,
+        x: now.x,
+        y: now.y,
+        facing: now.facing,
+        moving: Math.abs(now.x - before.x) > 1,
+        appearance: this.appearances.get(id)!,
+      };
     });
   }
 }

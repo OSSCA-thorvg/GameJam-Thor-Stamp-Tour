@@ -1,4 +1,4 @@
-import type { Canvas, LottieAnimation, Scene, Shape, ThorVGNamespace } from '@thorvg/webcanvas';
+import type { Canvas, Scene, Shape, ThorVGNamespace } from '@thorvg/webcanvas';
 import {
   GRAVITY,
   JUMP_VELOCITY,
@@ -6,21 +6,21 @@ import {
   MAP_WIDTH,
   MOVE_SPEED,
   WORLD_TICK_MS,
+  type Appearance,
   type Facing,
   type WorldPlayer,
   type WorldSnapshotPayload,
 } from '@stamp-tour/shared';
 import type { WorldSocket } from '../lib/socket';
-import { characterLottie, loadBackground } from './assets';
+import { loadBackground } from './assets';
+import { loadCharacter } from './character';
 import { getThorVG } from './engine';
 import type { GameInput } from './input';
 import { RemotePlayers } from './remotePlayers';
 
-type Action = 'idle' | 'walk' | 'jump';
 type Color = readonly [number, number, number];
 
 const GROUND_TOP = MAP_HEIGHT - 32;
-const CHARACTER_SIZE = 32;
 const PLACEHOLDER_WIDTH = 16;
 const PLACEHOLDER_HEIGHT = 24;
 const EDGE_MARGIN = PLACEHOLDER_WIDTH / 2;
@@ -53,65 +53,39 @@ function rect(TVG: ThorVGNamespace, x: number, y: number, w: number, h: number, 
   return new TVG.Shape().appendRect(x, y, w, h).fill(color[0], color[1], color[2]);
 }
 
-/** 캐릭터 1명분의 그림. Lottie 파일이 없거나 깨졌으면 사각형으로 대체한다. */
+/** 캐릭터 1명분의 그림. 부위 그림을 다 읽기 전이나 몸 그림이 없으면 사각형으로 그린다. */
 class Sprite {
   readonly scene: Scene;
-  private animation: LottieAnimation | null = null;
-  private ranges = new Map<string, { begin: number; end: number }>();
-  private fps = 0;
-  private totalFrames = 0;
-  private action: Action = 'idle';
-  private elapsedS = 0;
+  private disposed = false;
 
-  constructor(TVG: ThorVGNamespace, color: Color) {
+  constructor(TVG: ThorVGNamespace, appearance: Appearance, color: Color) {
     this.scene = new TVG.Scene();
-    this.animation = this.loadAnimation(TVG);
-    if (!this.animation) {
-      this.scene.add(
-        rect(TVG, -PLACEHOLDER_WIDTH / 2, -PLACEHOLDER_HEIGHT, PLACEHOLDER_WIDTH, PLACEHOLDER_HEIGHT, color),
-      );
-    }
+    const placeholder = rect(
+      TVG,
+      -PLACEHOLDER_WIDTH / 2,
+      -PLACEHOLDER_HEIGHT,
+      PLACEHOLDER_WIDTH,
+      PLACEHOLDER_HEIGHT,
+      color,
+    );
+    this.scene.add(placeholder);
+    void loadCharacter(TVG, appearance).then((character) => {
+      if (!character) return;
+      if (this.disposed) {
+        character.dispose();
+        return;
+      }
+      this.scene.remove(placeholder);
+      this.scene.add(character);
+    });
   }
 
-  private loadAnimation(TVG: ThorVGNamespace): LottieAnimation | null {
-    if (!characterLottie) return null;
-    try {
-      const animation = new TVG.LottieAnimation();
-      animation.load(characterLottie);
-      const picture = animation.picture;
-      const info = animation.info();
-      if (!picture || !info) {
-        animation.dispose();
-        return null;
-      }
-      picture.size(CHARACTER_SIZE, CHARACTER_SIZE).origin(0.5, 1);
-      this.scene.add(picture);
-      this.fps = info.fps;
-      this.totalFrames = info.totalFrames;
-      for (let i = 0; i < animation.markersCnt(); i++) {
-        const marker = animation.marker(i);
-        if (marker) this.ranges.set(marker.name, { begin: marker.begin, end: marker.end });
-      }
-      return animation;
-    } catch (err) {
-      console.error('캐릭터 Lottie 로드 실패', err);
-      return null;
-    }
-  }
-
-  draw(x: number, y: number, facing: Facing, action: Action, dtS: number) {
+  draw(x: number, y: number, facing: Facing) {
     this.scene.transform(translation(Math.round(x), Math.round(GROUND_TOP - y), facing));
-    if (!this.animation) return;
-
-    this.elapsedS = action === this.action ? this.elapsedS + dtS : 0;
-    this.action = action;
-    // segment()는 frame() 번호를 구간 기준으로 바꾸므로 마커의 절대 프레임으로 직접 넘긴다
-    const { begin, end } = this.ranges.get(action) ?? { begin: 0, end: this.totalFrames };
-    this.animation.frame(begin + ((this.elapsedS * this.fps) % Math.max(1, end - begin)));
   }
 
   dispose() {
-    this.animation?.dispose();
+    this.disposed = true;
   }
 }
 
@@ -141,7 +115,7 @@ export async function createGame(options: GameOptions): Promise<Game> {
   }
   canvas.add(world);
 
-  const self = new Sprite(TVG, ME_COLOR);
+  const self = new Sprite(TVG, me.appearance, ME_COLOR);
   const others = new Map<string, Sprite>();
   world.add(self.scene);
 
@@ -171,7 +145,6 @@ export async function createGame(options: GameOptions): Promise<Game> {
         vy = 0;
       }
     }
-    return direction !== 0;
   }
 
   function sendMove(now: number) {
@@ -182,7 +155,7 @@ export async function createGame(options: GameOptions): Promise<Game> {
     socket.emit('world:move', sent);
   }
 
-  function drawOthers(dtS: number) {
+  function drawOthers() {
     const views = remote.views();
     const seen = new Set(views.map((v) => v.id));
     for (const [id, sprite] of others) {
@@ -194,12 +167,11 @@ export async function createGame(options: GameOptions): Promise<Game> {
     for (const view of views) {
       let sprite = others.get(view.id);
       if (!sprite) {
-        sprite = new Sprite(TVG, OTHER_COLOR);
+        sprite = new Sprite(TVG, view.appearance, OTHER_COLOR);
         others.set(view.id, sprite);
         world.add(sprite.scene);
       }
-      const action: Action = view.y > 0.5 ? 'jump' : view.moving ? 'walk' : 'idle';
-      sprite.draw(view.x, view.y, view.facing, action, dtS);
+      sprite.draw(view.x, view.y, view.facing);
     }
   }
 
@@ -207,10 +179,10 @@ export async function createGame(options: GameOptions): Promise<Game> {
     const dtS = Math.min(MAX_DT_S, (now - lastFrame) / 1000);
     lastFrame = now;
 
-    const moving = step(dtS);
+    step(dtS);
     sendMove(now);
-    self.draw(x, y, facing, y > 0 ? 'jump' : moving ? 'walk' : 'idle', dtS);
-    drawOthers(dtS);
+    self.draw(x, y, facing);
+    drawOthers();
 
     const cameraX = Math.min(MAP_WIDTH - viewWidth, Math.max(0, x - viewWidth / 2));
     world.transform(translation(-Math.round(cameraX), 0));

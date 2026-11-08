@@ -1,17 +1,20 @@
 import {
+  DEFAULT_APPEARANCE,
   GUESTBOOK_MAX_LENGTH,
   JUMP_MAX_HEIGHT,
   MAP_EXIT_MARGIN_M,
   MAP_WIDTH,
   MOVE_SPEED,
   WORLD_TICK_MS,
+  type Appearance,
   type Facing,
   type GuestbookEntry,
   type GuestbookPostResult,
   type WorldPlayer,
 } from '@stamp-tour/shared';
+import { eq } from 'drizzle-orm';
 import { db } from '../db/client';
-import { spots } from '../db/schema';
+import { spots, users } from '../db/schema';
 import { env } from '../lib/env';
 import { haversineM } from '../lib/haversine';
 import { verifyToken } from '../lib/jwt';
@@ -26,6 +29,7 @@ interface PlayerState {
   x: number;
   y: number;
   facing: Facing;
+  appearance: Appearance;
   lastMoveAt: number;
 }
 
@@ -93,7 +97,13 @@ function moveToSpot(socket: WorldSocket, player: PlayerState, target: SpotRow | 
   socket.emit('world:status', {
     state: 'inside',
     spot: { id: target.id, key: target.key, name: target.name },
-    me: { id: socket.data.userId, x: player.x, y: player.y, facing: player.facing },
+    me: {
+      id: socket.data.userId,
+      x: player.x,
+      y: player.y,
+      facing: player.facing,
+      appearance: player.appearance,
+    },
   });
 }
 
@@ -183,7 +193,7 @@ function broadcastSnapshots(world: WorldNamespace) {
   for (const [id, p] of players) {
     if (!p.spotId) continue;
     const list = bySpot.get(p.spotId) ?? [];
-    list.push({ id, x: p.x, y: p.y, facing: p.facing });
+    list.push({ id, x: p.x, y: p.y, facing: p.facing, appearance: p.appearance });
     bySpot.set(p.spotId, list);
   }
   const t = Date.now();
@@ -202,6 +212,12 @@ export function registerWorld(io: TypedServer) {
       const payload = await verifyToken(token);
       socket.data.userId = payload.sub;
       socket.data.nickname = payload.nickname;
+      const [user] = await db
+        .select({ appearance: users.appearance })
+        .from(users)
+        .where(eq(users.id, payload.sub));
+      if (!user) throw new Error('no user');
+      socket.data.appearance = user.appearance ?? DEFAULT_APPEARANCE;
       next();
     } catch {
       next(new Error('unauthorized'));
@@ -219,6 +235,7 @@ export function registerWorld(io: TypedServer) {
       x: MAP_WIDTH / 2,
       y: 0,
       facing: 1,
+      appearance: socket.data.appearance,
       lastMoveAt: 0,
     });
     if (previous) {
