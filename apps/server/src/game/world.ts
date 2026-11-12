@@ -25,6 +25,7 @@ type SpotRow = typeof spots.$inferSelect;
 
 interface PlayerState {
   socketId: string;
+  nickname: string;
   spotId: string | null;
   x: number;
   y: number;
@@ -99,6 +100,7 @@ function moveToSpot(socket: WorldSocket, player: PlayerState, target: SpotRow | 
     spot: { id: target.id, key: target.key, name: target.name },
     me: {
       id: socket.data.userId,
+      nickname: socket.data.nickname,
       x: player.x,
       y: player.y,
       facing: player.facing,
@@ -193,7 +195,14 @@ function broadcastSnapshots(world: WorldNamespace) {
   for (const [id, p] of players) {
     if (!p.spotId) continue;
     const list = bySpot.get(p.spotId) ?? [];
-    list.push({ id, x: p.x, y: p.y, facing: p.facing, appearance: p.appearance });
+    list.push({
+      id,
+      nickname: p.nickname,
+      x: p.x,
+      y: p.y,
+      facing: p.facing,
+      appearance: p.appearance,
+    });
     bySpot.set(p.spotId, list);
   }
   const t = Date.now();
@@ -231,6 +240,7 @@ export function registerWorld(io: TypedServer) {
     const previous = players.get(userId);
     players.set(userId, {
       socketId: socket.id,
+      nickname: socket.data.nickname,
       spotId: null,
       x: MAP_WIDTH / 2,
       y: 0,

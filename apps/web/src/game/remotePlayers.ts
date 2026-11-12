@@ -9,6 +9,7 @@ interface Sample {
 
 export interface RemotePlayerView {
   id: string;
+  nickname: string;
   x: number;
   y: number;
   facing: Facing;
@@ -40,6 +41,7 @@ function sampleAt(samples: Sample[], t: number): Sample {
 export class RemotePlayers {
   private buffers = new Map<string, Sample[]>();
   private appearances = new Map<string, Appearance>();
+  private nicknames = new Map<string, string>();
   private clockOffset: number | null = null;
 
   constructor(private selfId: string) {}
@@ -52,10 +54,11 @@ export class RemotePlayers {
         : this.clockOffset + (offset - this.clockOffset) * CLOCK_SMOOTHING;
 
     const seen = new Set<string>();
-    for (const { id, x, y, facing, appearance } of players) {
+    for (const { id, nickname, x, y, facing, appearance } of players) {
       if (id === this.selfId) continue;
       seen.add(id);
       this.appearances.set(id, appearance);
+      this.nicknames.set(id, nickname);
       const samples = this.buffers.get(id) ?? [];
       samples.push({ t, x, y, facing });
       while (samples.length > 1 && samples[0]!.t < t - BUFFER_MS) samples.shift();
@@ -65,6 +68,7 @@ export class RemotePlayers {
       if (seen.has(id)) continue;
       this.buffers.delete(id);
       this.appearances.delete(id);
+      this.nicknames.delete(id);
     }
   }
 
@@ -75,6 +79,7 @@ export class RemotePlayers {
       const before = sampleAt(samples, renderT - MOVING_WINDOW_MS);
       return {
         id,
+        nickname: this.nicknames.get(id)!,
         x: now.x,
         y: now.y,
         facing: now.facing,

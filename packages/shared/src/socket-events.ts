@@ -75,6 +75,7 @@ export interface WorldSpot {
 
 export interface WorldPlayer {
   id: string;
+  nickname: string;
   x: number;
   y: number;
   facing: Facing;

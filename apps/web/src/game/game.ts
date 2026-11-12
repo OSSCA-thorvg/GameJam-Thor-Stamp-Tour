@@ -13,7 +13,7 @@ import {
 } from '@stamp-tour/shared';
 import type { WorldSocket } from '../lib/socket';
 import { loadBackground } from './assets';
-import { loadCharacter } from './character';
+import { CHARACTER_SIZE, loadCharacter } from './character';
 import { getThorVG, RENDER_SCALE } from './engine';
 import type { GameInput } from './input';
 import { RemotePlayers } from './remotePlayers';
@@ -58,13 +58,34 @@ function rect(TVG: ThorVGNamespace, x: number, y: number, w: number, h: number, 
   return new TVG.Shape().appendRect(x, y, w, h).fill(color[0], color[1], color[2]);
 }
 
-/** 캐릭터 1명분의 그림. 부위 그림을 다 읽기 전이나 몸 그림이 없으면 사각형으로 그린다. */
+/** 화면에서 보이는 맵 범위 */
+interface View {
+  cameraX: number;
+  width: number;
+}
+
+/**
+ * 캐릭터 1명분의 그림. 부위 그림을 다 읽기 전이나 몸 그림이 없으면 사각형으로 그린다.
+ * 닉네임은 한글 글꼴이 필요해서 Canvas가 아닌 HTML 요소로 캐릭터 위에 띄운다.
+ */
 class Sprite {
   readonly scene: Scene;
+  private readonly label: HTMLElement;
   private disposed = false;
 
-  constructor(TVG: ThorVGNamespace, appearance: Appearance, color: Color) {
+  constructor(
+    TVG: ThorVGNamespace,
+    appearance: Appearance,
+    color: Color,
+    nickname: string,
+    labels: HTMLElement,
+  ) {
     this.scene = new TVG.Scene();
+    this.label = document.createElement('span');
+    this.label.className =
+      'absolute -translate-x-1/2 -translate-y-full rounded bg-black/50 px-1 text-[10px] leading-4 whitespace-nowrap text-white';
+    this.label.textContent = nickname;
+    labels.append(this.label);
     const placeholder = rect(
       TVG,
       -PLACEHOLDER_WIDTH / 2,
@@ -85,13 +106,17 @@ class Sprite {
     });
   }
 
-  draw(x: number, y: number, facing: Facing) {
+  draw(x: number, y: number, facing: Facing, view: View) {
     // 원본 그림이 왼쪽을 보므로 오른쪽(facing 1)일 때 뒤집는다
     this.scene.transform(translation(Math.round(x), Math.round(GROUND_TOP - y), -facing as Facing));
+    // Canvas가 CSS로 늘어나므로 닉네임 위치는 비율로 잡는다
+    this.label.style.left = `${((Math.round(x) - view.cameraX) / view.width) * 100}%`;
+    this.label.style.top = `${((Math.round(GROUND_TOP - y) - CHARACTER_SIZE) / MAP_HEIGHT) * 100}%`;
   }
 
   dispose() {
     this.disposed = true;
+    this.label.remove();
   }
 }
 
@@ -102,6 +127,10 @@ export async function createGame(options: GameOptions): Promise<Game> {
   const element = document.createElement('canvas');
   element.className = 'block w-full! h-auto! [image-rendering:pixelated]';
   container.append(element);
+
+  const labels = document.createElement('div');
+  labels.className = 'pointer-events-none absolute inset-0 overflow-hidden';
+  container.append(labels);
 
   let viewWidth = options.viewWidth;
   const canvas: Canvas = new TVG.Canvas(element, {
@@ -124,7 +153,7 @@ export async function createGame(options: GameOptions): Promise<Game> {
   world.add(backdrop);
   canvas.add(world);
 
-  const self = new Sprite(TVG, me.appearance, ME_COLOR);
+  const self = new Sprite(TVG, me.appearance, ME_COLOR, me.nickname, labels);
   const others = new Map<string, Sprite>();
   world.add(self.scene);
 
@@ -185,7 +214,7 @@ export async function createGame(options: GameOptions): Promise<Game> {
     socket.emit('world:move', sent);
   }
 
-  function drawOthers() {
+  function drawOthers(view: View) {
     const views = showOthers ? remote.views() : [];
     const seen = new Set(views.map((v) => v.id));
     for (const [id, sprite] of others) {
@@ -194,14 +223,14 @@ export async function createGame(options: GameOptions): Promise<Game> {
       sprite.dispose();
       others.delete(id);
     }
-    for (const view of views) {
-      let sprite = others.get(view.id);
+    for (const other of views) {
+      let sprite = others.get(other.id);
       if (!sprite) {
-        sprite = new Sprite(TVG, view.appearance, OTHER_COLOR);
-        others.set(view.id, sprite);
+        sprite = new Sprite(TVG, other.appearance, OTHER_COLOR, other.nickname, labels);
+        others.set(other.id, sprite);
         world.add(sprite.scene);
       }
-      sprite.draw(view.x, view.y, view.facing);
+      sprite.draw(other.x, other.y, other.facing, view);
     }
   }
 
@@ -211,15 +240,16 @@ export async function createGame(options: GameOptions): Promise<Game> {
 
     step(dtS);
     sendMove(now);
-    self.draw(x, y, facing);
-    drawOthers();
+    const cameraX = Math.round(mode === 'pixel' ? followCameraX() : fixedCameraX);
+    const view = { cameraX, width: viewWidth };
+    self.draw(x, y, facing, view);
+    drawOthers(view);
 
-    const cameraX = mode === 'pixel' ? followCameraX() : fixedCameraX;
     // 맵 좌표는 그대로 두고 Canvas에는 RENDER_SCALE배로 그린다
     world.transform({
       e11: RENDER_SCALE,
       e12: 0,
-      e13: -Math.round(cameraX) * RENDER_SCALE,
+      e13: -cameraX * RENDER_SCALE,
       e21: 0,
       e22: RENDER_SCALE,
       e23: 0,
@@ -252,6 +282,7 @@ export async function createGame(options: GameOptions): Promise<Game> {
       self.dispose();
       for (const sprite of others.values()) sprite.dispose();
       element.remove();
+      labels.remove();
     },
   };
 }
