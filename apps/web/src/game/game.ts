@@ -14,7 +14,7 @@ import {
 import type { WorldSocket } from '../lib/socket';
 import { loadBackground } from './assets';
 import { loadCharacter } from './character';
-import { getThorVG } from './engine';
+import { getThorVG, RENDER_SCALE } from './engine';
 import type { GameInput } from './input';
 import { RemotePlayers } from './remotePlayers';
 
@@ -81,7 +81,8 @@ class Sprite {
   }
 
   draw(x: number, y: number, facing: Facing) {
-    this.scene.transform(translation(Math.round(x), Math.round(GROUND_TOP - y), facing));
+    // 원본 그림이 왼쪽을 보므로 오른쪽(facing 1)일 때 뒤집는다
+    this.scene.transform(translation(Math.round(x), Math.round(GROUND_TOP - y), -facing as Facing));
   }
 
   dispose() {
@@ -99,8 +100,8 @@ export async function createGame(options: GameOptions): Promise<Game> {
 
   let viewWidth = options.viewWidth;
   const canvas: Canvas = new TVG.Canvas(element, {
-    width: viewWidth,
-    height: MAP_HEIGHT,
+    width: viewWidth * RENDER_SCALE,
+    height: MAP_HEIGHT * RENDER_SCALE,
     enableDevicePixelRatio: false,
   });
 
@@ -185,7 +186,18 @@ export async function createGame(options: GameOptions): Promise<Game> {
     drawOthers();
 
     const cameraX = Math.min(MAP_WIDTH - viewWidth, Math.max(0, x - viewWidth / 2));
-    world.transform(translation(-Math.round(cameraX), 0));
+    // 맵 좌표는 그대로 두고 Canvas에는 RENDER_SCALE배로 그린다
+    world.transform({
+      e11: RENDER_SCALE,
+      e12: 0,
+      e13: -Math.round(cameraX) * RENDER_SCALE,
+      e21: 0,
+      e22: RENDER_SCALE,
+      e23: 0,
+      e31: 0,
+      e32: 0,
+      e33: 1,
+    });
     canvas.update().render();
     frameId = requestAnimationFrame(frame);
   }
@@ -194,7 +206,7 @@ export async function createGame(options: GameOptions): Promise<Game> {
   return {
     setViewWidth(width) {
       viewWidth = width;
-      canvas.resize(width, MAP_HEIGHT);
+      canvas.resize(width * RENDER_SCALE, MAP_HEIGHT * RENDER_SCALE);
     },
     destroy() {
       cancelAnimationFrame(frameId);

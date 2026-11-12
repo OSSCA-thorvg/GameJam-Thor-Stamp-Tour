@@ -36,7 +36,7 @@ export const GUESTBOOK_MAX_LENGTH = 100;
 export const GUESTBOOK_LIST_LIMIT = 50;
 
 /** 캐릭터 부위 — 몸 위에 이 순서대로 겹쳐 그린다. 몸은 모두 같아서 고르지 않는다. */
-export const CHARACTER_PARTS = ['shoes', 'clothes', 'face', 'hair'] as const;
+export const CHARACTER_PARTS = ['shoes', 'face', 'clothes', 'hair'] as const;
 export type CharacterPart = (typeof CHARACTER_PARTS)[number];
 /** 부위별 선택지 개수 — 선택값은 1부터 센다. */
 export const CHARACTER_PART_OPTIONS = 3;

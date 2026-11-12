@@ -2,7 +2,8 @@ import type { Picture, Scene, ThorVGNamespace } from '@thorvg/webcanvas';
 import { CHARACTER_PARTS, type Appearance } from '@stamp-tour/shared';
 import { bodyUrl, characterPartUrl } from './assets';
 
-export const CHARACTER_SIZE = 32;
+/** 맵에서 차지하는 칸 수. 그림 파일은 이것의 RENDER_SCALE배 크기로 만든다. */
+export const CHARACTER_SIZE = 72;
 
 // 같은 그림을 여러 캐릭터가 쓰므로 파일은 한 번만 받는다
 const bytesCache = new Map<string, Promise<Uint8Array>>();

@@ -9,7 +9,7 @@ import {
   type MeResponse,
 } from '@stamp-tour/shared';
 import { CHARACTER_SIZE, loadCharacter } from '../game/character';
-import { getThorVG } from '../game/engine';
+import { getThorVG, RENDER_SCALE } from '../game/engine';
 import { api } from '../lib/api';
 import { saveUser } from '../lib/auth';
 
@@ -42,7 +42,18 @@ function usePreview(appearance: Appearance) {
         loaded.dispose();
         return;
       }
-      character = loaded.translate(CHARACTER_SIZE / 2, CHARACTER_SIZE);
+      // 맵과 같은 배율로 그리고, 발 가운데를 Canvas 아래 가운데에 둔다
+      character = loaded.transform({
+        e11: RENDER_SCALE,
+        e12: 0,
+        e13: (CHARACTER_SIZE * RENDER_SCALE) / 2,
+        e21: 0,
+        e22: RENDER_SCALE,
+        e23: CHARACTER_SIZE * RENDER_SCALE,
+        e31: 0,
+        e32: 0,
+        e33: 1,
+      });
       stage.canvas.add(character).update().render();
     });
     return () => {
@@ -62,8 +73,8 @@ function usePreview(appearance: Appearance) {
       .then((TVG) => {
         if (dead) return;
         const canvas = new TVG.Canvas(element, {
-          width: CHARACTER_SIZE,
-          height: CHARACTER_SIZE,
+          width: CHARACTER_SIZE * RENDER_SCALE,
+          height: CHARACTER_SIZE * RENDER_SCALE,
           enableDevicePixelRatio: false,
         });
         created = { TVG, canvas };

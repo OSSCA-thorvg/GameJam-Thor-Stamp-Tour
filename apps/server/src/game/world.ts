@@ -93,7 +93,7 @@ function moveToSpot(socket: WorldSocket, player: PlayerState, target: SpotRow | 
   void socket.join(roomOf(target.id));
   player.x = MAP_WIDTH / 2;
   player.y = 0;
-  player.facing = 1;
+  player.facing = -1; // 처음에는 원본 그림처럼 왼쪽을 본다
   socket.emit('world:status', {
     state: 'inside',
     spot: { id: target.id, key: target.key, name: target.name },
@@ -234,7 +234,7 @@ export function registerWorld(io: TypedServer) {
       spotId: null,
       x: MAP_WIDTH / 2,
       y: 0,
-      facing: 1,
+      facing: -1,
       appearance: socket.data.appearance,
       lastMoveAt: 0,
     });
