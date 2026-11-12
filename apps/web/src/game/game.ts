@@ -31,8 +31,13 @@ const GROUND_COLOR: Color = [134, 239, 172];
 const ME_COLOR: Color = [37, 99, 235];
 const OTHER_COLOR: Color = [244, 63, 94];
 
+/** pixel: 도트 배경, camera: 카메라 위에 캐릭터만, split: 왼쪽 절반 도트 + 오른쪽 절반 카메라 */
+export type ViewMode = 'pixel' | 'camera' | 'split';
+
 export interface Game {
   setViewWidth(width: number): void;
+  setMode(mode: ViewMode): void;
+  setShowOthers(show: boolean): void;
   destroy(): void;
 }
 
@@ -108,12 +113,15 @@ export async function createGame(options: GameOptions): Promise<Game> {
   // 첫 Canvas가 생기기 전에 불러온 그림은 투명하게 그려지므로 Canvas 다음에 불러온다
   const background = await loadBackground(TVG, spotKey);
   const world = new TVG.Scene();
+  // 모드에 따라 배경만 숨기거나 자를 수 있게 따로 묶는다
+  const backdrop = new TVG.Scene();
   if (background) {
-    world.add(background);
+    backdrop.add(background);
   } else {
-    world.add(rect(TVG, 0, 0, MAP_WIDTH, GROUND_TOP, SKY_COLOR));
-    world.add(rect(TVG, 0, GROUND_TOP, MAP_WIDTH, MAP_HEIGHT - GROUND_TOP, GROUND_COLOR));
+    backdrop.add(rect(TVG, 0, 0, MAP_WIDTH, GROUND_TOP, SKY_COLOR));
+    backdrop.add(rect(TVG, 0, GROUND_TOP, MAP_WIDTH, MAP_HEIGHT - GROUND_TOP, GROUND_COLOR));
   }
+  world.add(backdrop);
   canvas.add(world);
 
   const self = new Sprite(TVG, me.appearance, ME_COLOR);
@@ -130,11 +138,32 @@ export async function createGame(options: GameOptions): Promise<Game> {
   let lastSent = 0;
   let sent = { x, y, facing };
   let frameId = 0;
+  let mode: ViewMode = 'pixel';
+  let showOthers = true;
+  // camera, split 모드에서는 화면이 캐릭터를 따라가지 않고 이 위치에 멈춰 있다
+  let fixedCameraX = 0;
+
+  function followCameraX() {
+    return Math.min(MAP_WIDTH - viewWidth, Math.max(0, x - viewWidth / 2));
+  }
+
+  /** 모드나 화면 너비가 바뀔 때 화면 위치와 배경을 다시 맞춘다. */
+  function applyMode() {
+    // 캐릭터를 순간 이동시키면 서버 좌표와 어긋나므로, 지금 보이는 자리에 화면을 멈춘다
+    if (mode !== 'pixel') fixedCameraX = Math.round(followCameraX());
+    backdrop.visible(mode !== 'camera');
+    const clipX = mode === 'split' ? fixedCameraX : 0;
+    const clipWidth = mode === 'split' ? viewWidth / 2 : MAP_WIDTH;
+    backdrop.clip(new TVG.Shape().appendRect(clipX, 0, clipWidth, MAP_HEIGHT));
+  }
 
   function step(dtS: number) {
     const direction = Number(input.right) - Number(input.left);
     if (direction !== 0) facing = direction as Facing;
-    x = Math.min(MAP_WIDTH - EDGE_MARGIN, Math.max(EDGE_MARGIN, x + direction * MOVE_SPEED * dtS));
+    // 화면이 멈춘 모드에서는 화면 안에서만 걷는다
+    const minX = mode === 'pixel' ? 0 : fixedCameraX;
+    const maxX = mode === 'pixel' ? MAP_WIDTH : fixedCameraX + viewWidth;
+    x = Math.min(maxX - EDGE_MARGIN, Math.max(minX + EDGE_MARGIN, x + direction * MOVE_SPEED * dtS));
 
     if (input.jumpQueued && y === 0) vy = JUMP_VELOCITY;
     input.jumpQueued = false;
@@ -157,7 +186,7 @@ export async function createGame(options: GameOptions): Promise<Game> {
   }
 
   function drawOthers() {
-    const views = remote.views();
+    const views = showOthers ? remote.views() : [];
     const seen = new Set(views.map((v) => v.id));
     for (const [id, sprite] of others) {
       if (seen.has(id)) continue;
@@ -185,7 +214,7 @@ export async function createGame(options: GameOptions): Promise<Game> {
     self.draw(x, y, facing);
     drawOthers();
 
-    const cameraX = Math.min(MAP_WIDTH - viewWidth, Math.max(0, x - viewWidth / 2));
+    const cameraX = mode === 'pixel' ? followCameraX() : fixedCameraX;
     // 맵 좌표는 그대로 두고 Canvas에는 RENDER_SCALE배로 그린다
     world.transform({
       e11: RENDER_SCALE,
@@ -207,6 +236,14 @@ export async function createGame(options: GameOptions): Promise<Game> {
     setViewWidth(width) {
       viewWidth = width;
       canvas.resize(width * RENDER_SCALE, MAP_HEIGHT * RENDER_SCALE);
+      applyMode();
+    },
+    setMode(next) {
+      mode = next;
+      applyMode();
+    },
+    setShowOthers(show) {
+      showOthers = show;
     },
     destroy() {
       cancelAnimationFrame(frameId);

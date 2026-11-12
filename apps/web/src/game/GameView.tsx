@@ -8,11 +8,13 @@ import {
   type WorldPlayer,
   type WorldSpot,
 } from '@stamp-tour/shared';
+import { useCamera } from '../hooks/useCamera';
 import { getWorldSocket } from '../lib/socket';
-import { createGame, type Game } from './game';
+import { createGame, type Game, type ViewMode } from './game';
 import GuestbookPanel from './GuestbookPanel';
 import { bindKeyboard, createInput } from './input';
 import TouchControls from './TouchControls';
+import ViewModeControls from './ViewModeControls';
 
 const DESKTOP_QUERY = `(min-width: ${DESKTOP_MIN_WIDTH_PX}px)`;
 
@@ -28,6 +30,24 @@ interface Props {
 export default function GameView({ spot, me }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [input] = useState(createInput);
+  const [activeGame, setActiveGame] = useState<Game | null>(null);
+  const [mode, setMode] = useState<ViewMode>('pixel');
+  const [showOthers, setShowOthers] = useState(true);
+  const { videoRef, error: cameraError } = useCamera(mode !== 'pixel');
+
+  // 모드를 바꿔도 게임은 다시 만들지 않고 설정만 넘긴다
+  useEffect(() => {
+    activeGame?.setMode(mode);
+  }, [activeGame, mode]);
+
+  useEffect(() => {
+    activeGame?.setShowOthers(showOthers);
+  }, [activeGame, showOthers]);
+
+  // 카메라를 못 켜면 도트 모드로 돌아간다
+  useEffect(() => {
+    if (cameraError) setMode('pixel');
+  }, [cameraError]);
 
   useEffect(() => {
     let dead = false;
@@ -46,8 +66,12 @@ export default function GameView({ spot, me }: Props) {
       input,
     })
       .then((created) => {
-        if (dead) created.destroy();
-        else game = created;
+        if (dead) {
+          created.destroy();
+          return;
+        }
+        game = created;
+        setActiveGame(created);
       })
       .catch((err) => console.error('게임 시작 실패:', err));
 
@@ -56,6 +80,7 @@ export default function GameView({ spot, me }: Props) {
       unbindKeyboard();
       media.removeEventListener('change', onMediaChange);
       game?.destroy();
+      setActiveGame(null);
     };
   }, [input, me, spot.key]);
 
@@ -67,9 +92,27 @@ export default function GameView({ spot, me }: Props) {
         {/* 데스크탑에서 맵 높이가 화면 절반을 넘지 않도록 너비를 제한한다 */}
         <div
           ref={containerRef}
-          className="mx-auto w-full overflow-hidden"
+          className="relative isolate mx-auto w-full overflow-hidden"
           style={{ maxWidth: `calc((50dvh - 3rem) * ${MAP_WIDTH / MAP_HEIGHT})` }}
+        >
+          {/* 카메라 영상은 Canvas 뒤에 깔린다. 반반 모드에서는 오른쪽 절반만 채운다 */}
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            className={`absolute inset-y-0 -z-10 h-full object-cover ${
+              mode === 'pixel' ? 'hidden' : mode === 'split' ? 'left-1/2 w-1/2' : 'left-0 w-full'
+            }`}
+          />
+        </div>
+        <ViewModeControls
+          mode={mode}
+          onModeChange={setMode}
+          showOthers={showOthers}
+          onShowOthersChange={setShowOthers}
         />
+        {cameraError && <p className="px-4 text-sm text-red-600">{cameraError}</p>}
         <TouchControls input={input} />
       </div>
       <GuestbookPanel />
