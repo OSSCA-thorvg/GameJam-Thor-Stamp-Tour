@@ -13,23 +13,19 @@ interface Props {
   onShowOthersChange: (show: boolean) => void;
 }
 
-function buttonClass(active: boolean) {
-  return `rounded-lg px-3 py-1.5 text-sm font-medium ${
-    active ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
-  }`;
-}
-
 export default function ViewModeControls({ mode, onModeChange, showOthers, onShowOthersChange }: Props) {
   return (
-    <div className="flex items-center justify-between gap-2 px-4">
-      <div className="flex gap-1">
+    <div className="flex items-center justify-between gap-2.5 px-[22px]">
+      <div className="flex overflow-hidden rounded-full border-2 border-ink bg-paper">
         {MODES.map((item) => (
           <button
             key={item.mode}
             type="button"
             aria-pressed={mode === item.mode}
             onClick={() => onModeChange(item.mode)}
-            className={buttonClass(mode === item.mode)}
+            className={`h-11 border-l-2 border-ink px-3.5 font-display text-[15px] first:border-l-0 ${
+              mode === item.mode ? 'bg-ink text-paper' : ''
+            }`}
           >
             {item.label}
           </button>
@@ -39,8 +35,25 @@ export default function ViewModeControls({ mode, onModeChange, showOthers, onSho
         type="button"
         aria-pressed={showOthers}
         onClick={() => onShowOthersChange(!showOthers)}
-        className={buttonClass(showOthers)}
+        className={`flex h-12 items-center gap-1.5 rounded-full border-2 border-ink px-3.5 font-display text-[15px] ${
+          showOthers ? 'bg-paper-shade' : 'bg-paper'
+        }`}
       >
+        {showOthers && (
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M5 12l5 5 9-10" />
+          </svg>
+        )}
         다른 캐릭터
       </button>
     </div>
