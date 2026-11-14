@@ -131,8 +131,8 @@ export default function OnboardingPage() {
       <div className="flex items-stretch gap-[18px]">
         <div className="relative h-[190px] w-[150px] shrink-0">
           <div className="absolute inset-0 overflow-hidden rounded-2xl border-[3px] border-ink bg-paper-shade shadow-[0_5px_0_var(--color-ink)]">
-            {/* 그림 가장자리의 빈칸을 잘라 캐릭터를 사진 가운데에 둔다 */}
-            <div ref={previewRef} className="absolute -top-[58px] -left-[69px] w-72" />
+            {/* 전신이 보이도록 그림을 원래 크기로 두고 세로 가운데쯤에 놓는다 */}
+            <div ref={previewRef} className="absolute top-[22px] left-0 w-36" />
           </div>
           <div aria-hidden className="absolute -top-3 left-[42px] h-[22px] w-[66px] -rotate-[4deg] bg-paper-line opacity-90" />
         </div>
