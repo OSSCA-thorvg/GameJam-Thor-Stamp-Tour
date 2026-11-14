@@ -51,6 +51,14 @@ const SPOTS = [
     radiusM: 400,
   },
   {
+    key: 'openup',
+    name: '오픈업',
+    description: '서초에 있는 오픈소스 개발자를 위한 개방형 공간. 서초대로40길 우제빌딩 2층.',
+    lat: 37.488,
+    lng: 127.0088,
+    radiusM: 150,
+  },
+  {
     key: 'test-spot',
     name: '테스트 지점 (내 위치)',
     description: '개발 테스트용 스탬프 지점. 실제 GPS 검증 테스트에 사용.',
