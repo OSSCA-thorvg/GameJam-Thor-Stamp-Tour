@@ -7,6 +7,7 @@ export async function listEntries(spotId: string): Promise<GuestbookEntry[]> {
   const rows = await db
     .select({
       id: guestbookEntries.id,
+      userId: guestbookEntries.userId,
       nickname: users.nickname,
       message: guestbookEntries.message,
       createdAt: guestbookEntries.createdAt,
@@ -46,5 +47,5 @@ export async function addEntry(
 ): Promise<GuestbookEntry> {
   const [row] = await db.insert(guestbookEntries).values({ spotId, userId, message }).returning();
   if (!row) throw new Error('방명록 저장 실패');
-  return { id: row.id, nickname, message: row.message, createdAt: row.createdAt.toISOString() };
+  return { id: row.id, userId, nickname, message: row.message, createdAt: row.createdAt.toISOString() };
 }

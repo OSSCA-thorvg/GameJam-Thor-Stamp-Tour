@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { GUESTBOOK_LIST_LIMIT, GUESTBOOK_MAX_LENGTH, type GuestbookEntry } from '@stamp-tour/shared';
+import { getUser } from '../lib/auth';
+import { formatTime } from '../lib/format';
 import { getWorldSocket } from '../lib/socket';
 
 /** 앞 목록이 더 최신이다. 구독과 목록 응답이 겹칠 수 있어 id로 거른다. */
@@ -10,20 +12,12 @@ function mergeEntries(newer: GuestbookEntry[], older: GuestbookEntry[]) {
     .slice(0, GUESTBOOK_LIST_LIMIT);
 }
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleString('ko-KR', {
-    month: 'numeric',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
-
 export default function GuestbookPanel() {
   const [entries, setEntries] = useState<GuestbookEntry[]>([]);
   const [message, setMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const myId = getUser()?.id;
 
   useEffect(() => {
     const socket = getWorldSocket();
@@ -52,39 +46,49 @@ export default function GuestbookPanel() {
   }
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col border-t border-slate-200">
-      <form onSubmit={onSubmit} className="flex shrink-0 gap-2 px-4 pt-3">
+    <section className="flex min-h-0 flex-1 flex-col border-t-2 border-dashed border-ink">
+      <ul className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-[22px] pt-3">
+        {entries.length === 0 && (
+          <li className="py-6 text-center text-sm font-bold text-ink-soft">아직 남겨진 글이 없습니다.</li>
+        )}
+        {entries.map((entry) => {
+          // 내 글은 오른쪽, 다른 사람 글은 왼쪽 말풍선이다
+          const mine = entry.userId === myId;
+          return (
+            <li key={entry.id} className={`flex flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}>
+              <div className={`flex max-w-full items-baseline gap-2 px-1 ${mine ? 'flex-row-reverse' : ''}`}>
+                <span className="truncate font-display text-sm">{mine ? '나' : entry.nickname}</span>
+                <span className="shrink-0 font-pixel text-[10px] text-ink-soft">{formatTime(entry.createdAt)}</span>
+              </div>
+              <p
+                className={`max-w-[82%] rounded-2xl border-2 border-ink px-[13px] py-2 text-[15px] leading-[1.45] break-words ${
+                  mine ? 'rounded-tr-[4px] bg-paper-shade' : 'rounded-tl-[4px] bg-paper'
+                }`}
+              >
+                {entry.message}
+              </p>
+            </li>
+          );
+        })}
+      </ul>
+      {error && <p className="shrink-0 px-[22px] pt-2 text-sm font-bold">{error}</p>}
+      <form onSubmit={onSubmit} className="flex shrink-0 gap-2 px-[22px] pt-2.5 pb-3">
         <input
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           maxLength={GUESTBOOK_MAX_LENGTH}
           placeholder="방명록을 남겨보세요"
           aria-label="방명록 내용"
-          className="min-w-0 flex-1 rounded-xl border border-slate-300 px-4 py-2 text-sm outline-none focus:border-blue-500"
+          className="h-[46px] min-w-0 flex-1 rounded-full border-2 border-ink bg-paper px-4 outline-none placeholder:text-ink-soft"
         />
         <button
           type="submit"
           disabled={sending || !message.trim()}
-          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+          className="h-[46px] shrink-0 rounded-full bg-ink px-4 font-display text-paper disabled:opacity-40"
         >
           남기기
         </button>
       </form>
-      {error && <p className="px-4 pt-2 text-sm text-red-500">{error}</p>}
-      <ul className="mt-2 min-h-0 flex-1 overflow-y-auto px-4 pb-3">
-        {entries.length === 0 && (
-          <li className="py-6 text-center text-sm text-slate-400">아직 남겨진 글이 없습니다.</li>
-        )}
-        {entries.map((entry) => (
-          <li key={entry.id} className="border-b border-slate-100 py-2 last:border-b-0">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="truncate text-sm font-semibold text-slate-800">{entry.nickname}</span>
-              <span className="shrink-0 text-xs text-slate-400">{formatTime(entry.createdAt)}</span>
-            </div>
-            <p className="mt-0.5 text-sm break-words text-slate-600">{entry.message}</p>
-          </li>
-        ))}
-      </ul>
     </section>
   );
 }

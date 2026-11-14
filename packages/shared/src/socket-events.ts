@@ -94,6 +94,8 @@ export interface WorldSnapshotPayload {
 
 export interface GuestbookEntry {
   id: string;
+  /** 글쓴이 — 내 글인지 가릴 때 쓴다 */
+  userId: string;
   nickname: string;
   message: string;
   /** ISO 8601 */
