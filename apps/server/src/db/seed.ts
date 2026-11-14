@@ -51,14 +51,6 @@ const SPOTS = [
     radiusM: 400,
   },
   {
-    key: 'yeongdeungpo-times-square',
-    name: '영등포 타임스퀘어',
-    description: '영등포역 인근의 대형 복합 쇼핑몰. 백화점과 서점, 영화관이 모여 있는 서남권 대표 상권.',
-    lat: 37.5172,
-    lng: 126.9035,
-    radiusM: 200,
-  },
-  {
     key: 'test-spot',
     name: '테스트 지점 (내 위치)',
     description: '개발 테스트용 스탬프 지점. 실제 GPS 검증 테스트에 사용.',
