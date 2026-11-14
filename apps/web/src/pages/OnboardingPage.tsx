@@ -11,7 +11,7 @@ import {
 import { CHARACTER_SIZE, loadCharacter } from '../game/character';
 import { getThorVG, RENDER_SCALE } from '../game/engine';
 import { api } from '../lib/api';
-import { saveUser } from '../lib/auth';
+import { getUser, saveUser } from '../lib/auth';
 
 // 화면에는 위에서 아래 순서로 보여 준다
 const ROWS: { part: CharacterPart; label: string }[] = [
@@ -123,48 +123,97 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-8 bg-white px-6">
-      <h1 className="text-2xl font-bold text-slate-900">캐릭터 만들기</h1>
-      <div ref={previewRef} className="w-40 rounded-xl bg-sky-100" />
-      <div className="flex w-full flex-col gap-3">
+    <div className="paper mx-auto flex min-h-dvh max-w-md flex-col gap-[18px] px-[22px] pt-7 font-body text-ink">
+      <div className="flex items-baseline justify-between">
+        <h1 className="font-display text-[28px]">여권 사진 찍기</h1>
+        <div className="font-pixel text-[11px] tracking-[3px]">PASSPORT</div>
+      </div>
+      <div className="flex items-stretch gap-[18px]">
+        <div className="relative h-[190px] w-[150px] shrink-0">
+          <div className="absolute inset-0 overflow-hidden rounded-2xl border-[3px] border-ink bg-paper-shade shadow-[0_5px_0_var(--color-ink)]">
+            {/* 그림 가장자리의 빈칸을 잘라 캐릭터를 사진 가운데에 둔다 */}
+            <div ref={previewRef} className="absolute -top-[58px] -left-[69px] w-72" />
+          </div>
+          <div aria-hidden className="absolute -top-3 left-[42px] h-[22px] w-[66px] -rotate-[4deg] bg-paper-line opacity-90" />
+        </div>
+        <dl className="flex min-w-0 flex-1 flex-col justify-between py-1">
+          <div className="border-b-2 border-dotted border-ink pb-2">
+            <dt className="font-pixel text-[10px] tracking-[1px] text-ink-soft">NAME · 이름</dt>
+            <dd className="truncate font-display text-[22px]">{getUser()?.nickname}</dd>
+          </div>
+          <div className="border-b-2 border-dotted border-ink pb-2">
+            <dt className="font-pixel text-[10px] tracking-[1px] text-ink-soft">TYPE · 종류</dt>
+            <dd className="text-[17px] font-bold">여행자</dd>
+          </div>
+          <div>
+            <dt className="font-pixel text-[10px] tracking-[1px] text-ink-soft">ISSUED · 발급일</dt>
+            <dd className="text-[17px] font-bold">{new Date().toLocaleDateString('ko-KR')}</dd>
+          </div>
+        </dl>
+      </div>
+      <div className="flex flex-col gap-2">
         {ROWS.map(({ part, label }) => (
-          <div key={part} className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-2">
-            <span className="font-medium text-slate-700">{label}</span>
-            <div className="flex items-center gap-4">
+          <div
+            key={part}
+            className="flex h-[52px] items-center justify-between rounded-[14px] border-2 border-ink bg-paper pr-1.5 pl-4"
+          >
+            <span className="font-display text-lg">{label}</span>
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => change(part, -1)}
                 aria-label={`${label} 이전`}
-                className="rounded-lg px-3 py-1 text-slate-500 active:bg-slate-100"
+                className="flex h-11 w-11 items-center justify-center rounded-xl active:bg-paper-shade"
               >
-                ◀
+                <Arrow className="-scale-x-100" />
               </button>
-              <span className="w-12 text-center text-sm text-slate-600 tabular-nums">
+              <span className="w-11 text-center font-pixel text-[13px]">
                 {appearance[part]} / {CHARACTER_PART_OPTIONS}
               </span>
               <button
                 type="button"
                 onClick={() => change(part, 1)}
                 aria-label={`${label} 다음`}
-                className="rounded-lg px-3 py-1 text-slate-500 active:bg-slate-100"
+                className="flex h-11 w-11 items-center justify-center rounded-xl active:bg-paper-shade"
               >
-                ▶
+                <Arrow />
               </button>
             </div>
           </div>
         ))}
       </div>
-      <div className="flex w-full flex-col gap-3">
-        {error && <p className="text-center text-sm text-red-500">{error}</p>}
+      <div className="flex flex-col gap-3">
+        {error && <p className="text-center text-sm font-bold text-ink">{error}</p>}
         <button
           type="button"
           onClick={onSubmit}
           disabled={saving}
-          className="rounded-xl bg-blue-600 py-3 font-semibold text-white disabled:opacity-40"
+          className="h-14 rounded-2xl bg-ink font-display text-xl text-paper shadow-[0_5px_0_var(--color-ink-soft)] disabled:opacity-40"
         >
-          {saving ? '저장하는 중...' : '완료'}
+          {saving ? '발급하는 중...' : '발급 완료'}
         </button>
       </div>
+      {/* 여권 아래쪽의 기계 판독란을 흉내 낸 장식 */}
+      <div
+        aria-hidden
+        className="-mx-[22px] mt-auto overflow-hidden border-t-2 border-dashed border-ink bg-paper-shade px-[22px] pt-3.5 pb-[18px] font-pixel text-xs leading-[1.7] tracking-[1.5px] whitespace-nowrap"
+      >
+        {'P<STAMPTOUR<<TRAVELER<<<<<<<<<<<<'}
+        <br />
+        {'STAMP<TOUR<PASSPORT<<<<<<<<<<<<<<<'}
+      </div>
     </div>
+  );
+}
+
+/** 오른쪽을 가리키는 도트 화살표 */
+function Arrow({ className = '' }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 7 7" shapeRendering="crispEdges" aria-hidden className={`fill-ink ${className}`}>
+      <rect x="2" y="0" width="1" height="7" />
+      <rect x="3" y="1" width="1" height="5" />
+      <rect x="4" y="2" width="1" height="3" />
+      <rect x="5" y="3" width="1" height="1" />
+    </svg>
   );
 }
