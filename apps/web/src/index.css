@@ -1,5 +1,28 @@
 @import 'tailwindcss';
 
+/* 색과 글꼴의 뜻은 docs/DESIGN.md에 적혀 있다 */
+@theme {
+  --color-passport: #47e9db;
+  --color-paper: #f7f1e6;
+  --color-paper-shade: #e8ddca;
+  --color-paper-line: #c9bca7;
+  --color-ink-soft: #91877b;
+  --color-ink: #453f38;
+  --color-stamp-red: #c8402b;
+  --color-stamp-blue: #2f5fc4;
+
+  --font-display: 'Jua', sans-serif;
+  --font-body: 'Gowun Dodum', sans-serif;
+  --font-pixel: 'Silkscreen', monospace;
+}
+
+/* 여권 속지 — 종이 바탕에 점 무늬 */
+@utility paper {
+  background-color: var(--color-paper);
+  background-image: radial-gradient(var(--color-paper-shade) 1.2px, transparent 1.2px);
+  background-size: 16px 16px;
+}
+
 body {
   @apply bg-slate-100;
 }
