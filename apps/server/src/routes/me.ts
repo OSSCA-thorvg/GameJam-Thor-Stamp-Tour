@@ -22,7 +22,7 @@ meRoutes.put('/appearance', async (c) => {
   if (!isValidAppearance(body)) return c.json({ error: '캐릭터 선택값이 올바르지 않습니다.' }, 400);
 
   // 부위 외의 키는 버리고 저장한다
-  const appearance = { shoes: body.shoes, clothes: body.clothes, face: body.face, hair: body.hair };
+  const appearance = { clothes: body.clothes, face: body.face, hair: body.hair };
   const [user] = await db.update(users).set({ appearance }).where(eq(users.id, c.get('userId'))).returning();
   if (!user) return c.json({ error: '유저를 찾을 수 없습니다.' }, 404);
   const res: MeResponse = { id: user.id, nickname: user.nickname, appearance };

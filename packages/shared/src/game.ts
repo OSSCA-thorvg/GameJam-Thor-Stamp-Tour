@@ -35,22 +35,29 @@ export const JUMP_MAX_HEIGHT = 48;
 export const GUESTBOOK_MAX_LENGTH = 100;
 export const GUESTBOOK_LIST_LIMIT = 50;
 
-/** 캐릭터 부위 — 몸 위에 이 순서대로 겹쳐 그린다. 몸은 모두 같아서 고르지 않는다. */
-export const CHARACTER_PARTS = ['shoes', 'face', 'clothes', 'hair'] as const;
+/**
+ * 캐릭터 부위 — 몸 위에 이 순서대로 겹쳐 그린다. 몸은 모두 같아서 고르지 않는다.
+ * 옷 그림에는 신발이 함께 들어 있다.
+ */
+export const CHARACTER_PARTS = ['face', 'clothes', 'hair'] as const;
 export type CharacterPart = (typeof CHARACTER_PARTS)[number];
-/** 부위별 선택지 개수 — 선택값은 1부터 센다. */
-export const CHARACTER_PART_OPTIONS = 3;
+/** 부위별 선택지 — 값은 그림 파일 번호다 (`clothes4.png`이면 4). */
+export const CHARACTER_PART_CHOICES: Record<CharacterPart, readonly number[]> = {
+  face: [1, 2, 3],
+  clothes: [4, 5, 6],
+  hair: [1, 2, 3],
+};
 
 export type Appearance = Record<CharacterPart, number>;
 
-export const DEFAULT_APPEARANCE: Appearance = { shoes: 1, clothes: 1, face: 1, hair: 1 };
+export const DEFAULT_APPEARANCE: Appearance = { clothes: 4, face: 1, hair: 1 };
 
 export function isValidAppearance(value: unknown): value is Appearance {
   if (typeof value !== 'object' || value === null) return false;
   const record = value as Record<string, unknown>;
   return CHARACTER_PARTS.every((part) => {
     const n = record[part];
-    return Number.isInteger(n) && (n as number) >= 1 && (n as number) <= CHARACTER_PART_OPTIONS;
+    return CHARACTER_PART_CHOICES[part].includes(n as number);
   });
 }
 

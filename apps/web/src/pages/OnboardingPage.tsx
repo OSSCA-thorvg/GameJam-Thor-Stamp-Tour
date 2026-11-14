@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Canvas, Scene, ThorVGNamespace } from '@thorvg/webcanvas';
 import {
-  CHARACTER_PART_OPTIONS,
+  CHARACTER_PART_CHOICES,
   DEFAULT_APPEARANCE,
   type Appearance,
   type CharacterPart,
@@ -18,7 +18,6 @@ const ROWS: { part: CharacterPart; label: string }[] = [
   { part: 'hair', label: '머리' },
   { part: 'face', label: '얼굴' },
   { part: 'clothes', label: '옷' },
-  { part: 'shoes', label: '신발' },
 ];
 
 interface Stage {
@@ -101,8 +100,9 @@ export default function OnboardingPage() {
 
   function change(part: CharacterPart, delta: number) {
     setAppearance((prev) => {
-      const next = ((prev[part] - 1 + delta + CHARACTER_PART_OPTIONS) % CHARACTER_PART_OPTIONS) + 1;
-      return { ...prev, [part]: next };
+      const choices = CHARACTER_PART_CHOICES[part];
+      const index = (choices.indexOf(prev[part]) + delta + choices.length) % choices.length;
+      return { ...prev, [part]: choices[index]! };
     });
   }
 
@@ -168,7 +168,7 @@ export default function OnboardingPage() {
                 <Arrow className="-scale-x-100" />
               </button>
               <span className="w-11 text-center font-pixel text-[13px]">
-                {appearance[part]} / {CHARACTER_PART_OPTIONS}
+                {CHARACTER_PART_CHOICES[part].indexOf(appearance[part]) + 1} / {CHARACTER_PART_CHOICES[part].length}
               </span>
               <button
                 type="button"

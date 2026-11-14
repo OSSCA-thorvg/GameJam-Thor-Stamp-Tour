@@ -1,5 +1,10 @@
 import type { Picture, Scene, ThorVGNamespace } from '@thorvg/webcanvas';
-import { CHARACTER_PARTS, type Appearance } from '@stamp-tour/shared';
+import {
+  CHARACTER_PART_CHOICES,
+  CHARACTER_PARTS,
+  DEFAULT_APPEARANCE,
+  type Appearance,
+} from '@stamp-tour/shared';
 import { bodyUrl, characterPartUrl } from './assets';
 
 /** 맵에서 차지하는 칸 수. 그림 파일은 이것의 RENDER_SCALE배 크기로 만든다. */
@@ -43,7 +48,16 @@ async function loadPart(TVG: ThorVGNamespace, url: string): Promise<Picture | nu
  */
 export async function loadCharacter(TVG: ThorVGNamespace, appearance: Appearance): Promise<Scene | null> {
   if (!bodyUrl) return null;
-  const urls = [bodyUrl, ...CHARACTER_PARTS.map((part) => characterPartUrl(part, appearance[part]))];
+  // 예전에 저장한 값이 지금 선택지에 없으면 기본 그림으로 그린다
+  const urls = [
+    bodyUrl,
+    ...CHARACTER_PARTS.map((part) => {
+      const option = CHARACTER_PART_CHOICES[part].includes(appearance[part])
+        ? appearance[part]
+        : DEFAULT_APPEARANCE[part];
+      return characterPartUrl(part, option);
+    }),
+  ];
   const pictures = await Promise.all(urls.map((url) => (url ? loadPart(TVG, url) : null)));
   if (!pictures[0]) {
     for (const picture of pictures) picture?.dispose();
