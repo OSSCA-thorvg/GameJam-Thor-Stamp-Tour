@@ -1,12 +1,14 @@
 import GameView from '../game/GameView';
 import { useWorld } from '../hooks/useWorld';
 import { formatDistance } from '../lib/format';
+import MyGuestbookView from './MyGuestbookView';
 
 function Notice({ title, children }: { title: string; children?: React.ReactNode }) {
   return (
-    <div className="flex min-h-full flex-col items-center justify-center gap-2 px-6 py-20 text-center">
-      <h1 className="text-xl font-bold text-slate-900">{title}</h1>
-      {children && <p className="text-sm text-slate-500">{children}</p>}
+    // main의 하단 바 여백(72px)을 뺀 높이를 채운다
+    <div className="paper flex min-h-[calc(100dvh-72px)] flex-col items-center justify-center gap-2 px-[22px] text-center font-body text-ink">
+      <h1 className="font-display text-[28px]">{title}</h1>
+      {children && <p className="text-sm font-bold text-ink-soft">{children}</p>}
     </div>
   );
 }
@@ -17,14 +19,17 @@ export default function HomePage() {
   switch (view.kind) {
     case 'inside':
       return <GameView key={view.spot.id} spot={view.spot} me={view.me} />;
-    case 'outside':
+    case 'outside': {
+      const nearestText = view.nearest
+        ? `가장 가까운 관광지: ${view.nearest.name} (${formatDistance(view.nearest.distanceM)})`
+        : '등록된 관광지가 없습니다.';
       return (
-        <Notice title="관광지에 도착하면 맵이 열려요">
-          {view.nearest
-            ? `가장 가까운 관광지: ${view.nearest.name} (${formatDistance(view.nearest.distanceM)})`
-            : '등록된 관광지가 없습니다.'}
-        </Notice>
+        <MyGuestbookView
+          nearest={view.nearest}
+          empty={<Notice title="관광지에 도착하면 맵이 열려요">{nearestText}</Notice>}
+        />
       );
+    }
     case 'replaced':
       return <Notice title="다른 탭에서 접속했습니다">이 탭의 맵 연결을 종료했습니다.</Notice>;
     case 'unavailable':

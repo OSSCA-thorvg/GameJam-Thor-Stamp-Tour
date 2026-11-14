@@ -1,7 +1,7 @@
 import { desc, eq } from 'drizzle-orm';
-import { GUESTBOOK_LIST_LIMIT, type GuestbookEntry } from '@stamp-tour/shared';
+import { GUESTBOOK_LIST_LIMIT, type GuestbookEntry, type MyGuestbookEntry } from '@stamp-tour/shared';
 import { db } from '../db/client';
-import { guestbookEntries, users } from '../db/schema';
+import { guestbookEntries, spots, users } from '../db/schema';
 
 export async function listEntries(spotId: string): Promise<GuestbookEntry[]> {
   const rows = await db
@@ -16,6 +16,24 @@ export async function listEntries(spotId: string): Promise<GuestbookEntry[]> {
     .where(eq(guestbookEntries.spotId, spotId))
     .orderBy(desc(guestbookEntries.createdAt))
     .limit(GUESTBOOK_LIST_LIMIT);
+
+  return rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }));
+}
+
+/** 한 사용자가 모든 관광지에 남긴 글. 최신 글이 앞이다. */
+export async function listEntriesByUser(userId: string): Promise<MyGuestbookEntry[]> {
+  const rows = await db
+    .select({
+      id: guestbookEntries.id,
+      spotId: guestbookEntries.spotId,
+      spotName: spots.name,
+      message: guestbookEntries.message,
+      createdAt: guestbookEntries.createdAt,
+    })
+    .from(guestbookEntries)
+    .innerJoin(spots, eq(guestbookEntries.spotId, spots.id))
+    .where(eq(guestbookEntries.userId, userId))
+    .orderBy(desc(guestbookEntries.createdAt));
 
   return rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }));
 }

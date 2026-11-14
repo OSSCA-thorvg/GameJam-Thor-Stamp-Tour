@@ -3,6 +3,7 @@ import { desc, eq } from 'drizzle-orm';
 import { isValidAppearance, type MeResponse, type StampRecord } from '@stamp-tour/shared';
 import { db } from '../db/client';
 import { spots, stamps, users } from '../db/schema';
+import { listEntriesByUser } from '../game/guestbook';
 import { authGuard, type AuthEnv } from '../lib/auth-middleware';
 
 export const meRoutes = new Hono<AuthEnv>();
@@ -47,4 +48,8 @@ meRoutes.get('/stamps', async (c) => {
     stampedAt: r.stampedAt.toISOString(),
   }));
   return c.json(result);
+});
+
+meRoutes.get('/guestbook', async (c) => {
+  return c.json(await listEntriesByUser(c.get('userId')));
 });

@@ -31,6 +31,16 @@ export interface StampRecord {
   stampedAt: string;
 }
 
+/** 내가 쓴 방명록 한 건 — 어느 관광지에 남겼는지 함께 준다. */
+export interface MyGuestbookEntry {
+  id: string;
+  spotId: string;
+  spotName: string;
+  message: string;
+  /** ISO 8601 */
+  createdAt: string;
+}
+
 export interface StampResponse {
   stamp: StampRecord;
 }
