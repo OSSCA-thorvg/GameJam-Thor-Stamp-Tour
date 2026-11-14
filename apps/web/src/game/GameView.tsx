@@ -1,13 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  DESKTOP_MIN_WIDTH_PX,
-  MAP_HEIGHT,
-  MAP_WIDTH,
-  VIEW_WIDTH_DESKTOP,
-  VIEW_WIDTH_MOBILE,
-  type WorldPlayer,
-  type WorldSpot,
-} from '@stamp-tour/shared';
+import { MAP_HEIGHT, MAP_WIDTH, VIEW_WIDTH, type WorldPlayer, type WorldSpot } from '@stamp-tour/shared';
 import { useCamera } from '../hooks/useCamera';
 import { getWorldSocket } from '../lib/socket';
 import { createGame, type Game, type ViewMode } from './game';
@@ -15,12 +7,6 @@ import GuestbookPanel from './GuestbookPanel';
 import { bindKeyboard, createInput } from './input';
 import TouchControls from './TouchControls';
 import ViewModeControls from './ViewModeControls';
-
-const DESKTOP_QUERY = `(min-width: ${DESKTOP_MIN_WIDTH_PX}px)`;
-
-function currentViewWidth() {
-  return window.matchMedia(DESKTOP_QUERY).matches ? VIEW_WIDTH_DESKTOP : VIEW_WIDTH_MOBILE;
-}
 
 type Tab = 'map' | 'guestbook';
 
@@ -70,17 +56,14 @@ export default function GameView({ spot, me }: Props) {
   useEffect(() => {
     let dead = false;
     let game: Game | null = null;
-    const media = window.matchMedia(DESKTOP_QUERY);
-    const onMediaChange = () => game?.setViewWidth(currentViewWidth());
     const unbindKeyboard = bindKeyboard(input);
-    media.addEventListener('change', onMediaChange);
 
     createGame({
       container: containerRef.current!,
       socket: getWorldSocket(),
       me,
       spotKey: spot.key,
-      viewWidth: currentViewWidth(),
+      viewWidth: VIEW_WIDTH,
       input,
     })
       .then((created) => {
@@ -96,7 +79,6 @@ export default function GameView({ spot, me }: Props) {
     return () => {
       dead = true;
       unbindKeyboard();
-      media.removeEventListener('change', onMediaChange);
       game?.destroy();
       setActiveGame(null);
     };

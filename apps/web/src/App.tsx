@@ -36,21 +36,17 @@ function RequireAuth() {
 }
 
 function Layout() {
-  // 홈 맵은 데스크탑에서 한 화면 전체를 쓴다
-  const wide = useLocation().pathname === '/home' ? 'lg:max-w-none' : '';
   // 여권의 색인 탭 모양 — 선택된 탭이 더 높다
   const tabClass = ({ isActive }: { isActive: boolean }) =>
     `flex flex-1 flex-col items-center justify-center gap-0.5 rounded-t-[14px] border-2 border-b-0 border-ink font-display text-[15px] text-ink ${
       isActive ? 'h-[68px] bg-passport' : 'h-[58px] bg-paper'
     }`;
   return (
-    <div className={`mx-auto flex min-h-dvh max-w-md flex-col bg-white shadow-lg ${wide}`}>
+    <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-white shadow-lg">
       <main className="flex-1 overflow-y-auto pb-[72px]">
         <Outlet />
       </main>
-      <nav
-        className={`fixed bottom-0 left-1/2 flex h-[72px] w-full max-w-md -translate-x-1/2 items-end gap-1.5 border-t-2 border-ink bg-paper-shade px-3 ${wide}`}
-      >
+      <nav className="fixed bottom-0 left-1/2 flex h-[72px] w-full max-w-md -translate-x-1/2 items-end gap-1.5 border-t-2 border-ink bg-paper-shade px-3">
         <NavLink to="/home" className={tabClass}>
           <TabIcon>
             <path d="M3 11l9-8 9 8" />

@@ -35,7 +35,6 @@ const OTHER_COLOR: Color = [244, 63, 94];
 export type ViewMode = 'pixel' | 'camera' | 'split';
 
 export interface Game {
-  setViewWidth(width: number): void;
   setMode(mode: ViewMode): void;
   setShowOthers(show: boolean): void;
   destroy(): void;
@@ -132,7 +131,7 @@ export async function createGame(options: GameOptions): Promise<Game> {
   labels.className = 'pointer-events-none absolute inset-0 overflow-hidden';
   container.append(labels);
 
-  let viewWidth = options.viewWidth;
+  const viewWidth = options.viewWidth;
   const canvas: Canvas = new TVG.Canvas(element, {
     width: viewWidth * RENDER_SCALE,
     height: MAP_HEIGHT * RENDER_SCALE,
@@ -176,7 +175,7 @@ export async function createGame(options: GameOptions): Promise<Game> {
     return Math.min(MAP_WIDTH - viewWidth, Math.max(0, x - viewWidth / 2));
   }
 
-  /** 모드나 화면 너비가 바뀔 때 화면 위치와 배경을 다시 맞춘다. */
+  /** 모드가 바뀔 때 화면 위치와 배경을 다시 맞춘다. */
   function applyMode() {
     // 캐릭터를 순간 이동시키면 서버 좌표와 어긋나므로, 지금 보이는 자리에 화면을 멈춘다
     if (mode !== 'pixel') fixedCameraX = Math.round(followCameraX());
@@ -263,11 +262,6 @@ export async function createGame(options: GameOptions): Promise<Game> {
   frameId = requestAnimationFrame(frame);
 
   return {
-    setViewWidth(width) {
-      viewWidth = width;
-      canvas.resize(width * RENDER_SCALE, MAP_HEIGHT * RENDER_SCALE);
-      applyMode();
-    },
     setMode(next) {
       mode = next;
       applyMode();

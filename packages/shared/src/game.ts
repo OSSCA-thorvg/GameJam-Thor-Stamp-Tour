@@ -19,9 +19,8 @@ export const DEFAULT_STAMP_RADIUS_M = 100;
 /** 홈 화면 맵 규칙 상수 — 좌표 단위는 맵 픽셀이고 y는 지면에서 위로 잰 높이다. */
 export const MAP_WIDTH = 640;
 export const MAP_HEIGHT = 240;
-export const VIEW_WIDTH_DESKTOP = 640;
-export const VIEW_WIDTH_MOBILE = 320;
-export const DESKTOP_MIN_WIDTH_PX = 1024;
+/** 화면에 한 번에 보이는 맵 너비 — 넓은 화면에서도 모바일과 같다. */
+export const VIEW_WIDTH = 320;
 
 /** 맵에서 나가는 판정에 반경 위로 더하는 여유 거리(m) */
 export const MAP_EXIT_MARGIN_M = 50;
